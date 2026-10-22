@@ -1,0 +1,3 @@
+# Use LF for all automatically detected text files, on every operating system.
+# Binary files are not subject to line-ending conversion.
+* text=auto eol=lf
