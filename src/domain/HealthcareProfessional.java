@@ -1,0 +1,37 @@
+package domain;
+
+public class HealthcareProfessional extends AuthorizedClinicStaff {
+    private String title;// e.g. "Dr.", "Nurse Practitioner", null
+    private String licenseNumber;
+    private MedicalSpecialty specialty; 
+    private Schedule schedule;
+
+    public HealthcareProfessional(int id, String password, String firstName, String lastName,
+                                  String title, String licenseNumber, MedicalSpecialty specialty) {
+        super(id, password, firstName, lastName, UserRole.HEALTHCARE_PROFESSIONAL);
+        this.title = title;
+        this.licenseNumber = licenseNumber;
+        this.specialty = specialty;
+        this.schedule = new Schedule(this);
+    }
+
+    public Schedule getSchedule() {
+        return schedule;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getLicenseNumber() {
+        return licenseNumber;
+    }
+
+    public MedicalSpecialty getSpecialty() {
+        return specialty;
+    }
+
+    public boolean hasSpecialty(MedicalSpecialty specialty) {
+        return this.specialty.equals(specialty);
+    }
+}
