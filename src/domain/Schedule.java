@@ -29,14 +29,25 @@ public class Schedule {
         throw new UnsupportedOperationException("TODO: Schedule.meetsSchedulingConstraints");
     }
 
+    // Rejects a slot that overlaps one already in the schedule
     public TimeSlot addTimeSlot(LocalDate date, LocalTime startTime, LocalTime endTime) {
-        // TODO (Make Availability)
-        throw new UnsupportedOperationException("TODO: Schedule.addTimeSlot");
+        TimeSlot slot = new TimeSlot(this, date, startTime, endTime);
+        for (TimeSlot existing : timeSlots) {
+            if (existing.overlaps(slot)) {
+                throw new IllegalArgumentException("Time slot " + slot + " overlaps " + existing);
+            }
+        }
+        timeSlots.add(slot);
+        return slot;
     }
 
     public List<TimeSlot> makeAvailability(DateRange range, RecurrencePattern pattern, LocalTime startTime, LocalTime endTime, Duration slotLength) {
         // TODO (Make Availability)
         throw new UnsupportedOperationException("TODO: Schedule.makeAvailability");
+    }
+
+    public List<TimeSlot> getTimeSlots() {
+        return new ArrayList<>(timeSlots);
     }
 
     public HealthcareProfessional getProfessional() {
