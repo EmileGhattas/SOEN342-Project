@@ -4,6 +4,7 @@ import domain.HealthcareProfessional;
 import domain.MedicalService;
 import domain.Patient;
 import domain.Referral;
+import domain.ReferralStatus;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,7 +17,21 @@ public class ReferralCatalog extends Catalog<Referral> {
     }
 
     public Referral findRequiredReferral(Patient patient, HealthcareProfessional hcp, MedicalService service) {
-        // TODO (Book Appointment)
-        throw new UnsupportedOperationException("TODO: ReferralCatalog.findRequiredReferral");
+        if (patient == null || hcp == null || service == null) {
+            throw new IllegalArgumentException("Patient, professional and service are required.");
+        }
+        if (!service.requiresReferral()) {
+            return null;
+        }
+        for (Referral referral : referrals) {
+            if (referral.getPatient() == patient
+                    && referral.getStatus() == ReferralStatus.CONFIRMED
+                    && referral.getSpecialty() != null
+                    && hcp.getSpecialty() != null
+                    && referral.getSpecialty().getName().equalsIgnoreCase(hcp.getSpecialty().getName())) {
+                return referral;
+            }
+        }
+        return null;
     }
 }

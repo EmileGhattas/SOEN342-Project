@@ -20,13 +20,13 @@ public class Schedule {
     }
 
     public boolean canBook(TimeSlot slot, MedicalService service) {
-        // TODO (Book Appointment)
-        throw new UnsupportedOperationException("TODO: Schedule.canBook");
+        return slot != null && service != null && timeSlots.contains(slot)
+                && slot.isAvailable() && meetsSchedulingConstraints(slot, service);
     }
 
     private boolean meetsSchedulingConstraints(TimeSlot slot, MedicalService service) {
-        // TODO (Book Appointment)
-        throw new UnsupportedOperationException("TODO: Schedule.meetsSchedulingConstraints");
+        // This PoC books one whole slot; the service must fit inside it.
+        return slot.getDuration().compareTo(Duration.ofMinutes(service.getDuration())) >= 0;
     }
 
     // Rejects a slot that overlaps one already in the schedule
