@@ -1,0 +1,7 @@
+First Name,Last Name,Title,License Number,Specialty,Date,Start,End,Status
+Alice,Tremblay,Dr.,LIC1001,Cardiology,2026-12-01,09:00,09:30,AVAILABLE
+Alice,Tremblay,Dr.,LIC1001,Cardiology,2026-12-01,09:30,10:00,BOOKED
+Alice,Tremblay,Dr.,LIC1001,Cardiology,2026-12-03,13:00,13:30,AVAILABLE
+Marc,Gagnon,Dr.,LIC1002,Dermatology,2026-12-02,10:00,10:30,AVAILABLE
+Marc,Gagnon,Dr.,LIC1002,Dermatology,2026-12-15,10:00,10:30,AVAILABLE
+Sofia,Nguyen,Nurse Practitioner,LIC1003,Cardiology,2026-12-02,14:00,14:30,AVAILABLE

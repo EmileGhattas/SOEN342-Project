@@ -1,0 +1,42 @@
+package domain;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+
+// How availability repeats
+public class RecurrencePattern {
+    private Set<DayOfWeek> daysOfWeek;
+    private int dayOfMonth;
+
+    private RecurrencePattern(Set<DayOfWeek> daysOfWeek, int dayOfMonth) {
+        this.daysOfWeek = daysOfWeek;
+        this.dayOfMonth = dayOfMonth;
+    }
+
+    public static RecurrencePattern weekly(DayOfWeek... days) {
+        if (days.length == 0) {
+            throw new IllegalArgumentException("Choose at least one day of the week.");
+        }
+        return new RecurrencePattern(Set.copyOf(Arrays.asList(days)), 0);
+    }
+
+    public static RecurrencePattern monthly(int dayOfMonth) {
+        if (dayOfMonth < 1 || dayOfMonth > 31) {
+            throw new IllegalArgumentException("Day of month must be between 1 and 31.");
+        }
+        return new RecurrencePattern(Set.of(), dayOfMonth);
+    }
+
+    public List<LocalDate> datesIn(DateRange range) {
+        // TODO (Make Availability)
+        throw new UnsupportedOperationException("TODO: RecurrencePattern.datesIn");
+    }
+
+    @Override
+    public String toString() {
+        return dayOfMonth == 0 ? "every " + daysOfWeek : "monthly on day " + dayOfMonth;
+    }
+}
