@@ -9,17 +9,17 @@
 | Book Appointment Operations | Manlai |
 | Book Appointment SSD | Emile |
 | Book Appointment Use Case | Nada |
-| Book Appointment Interaction Diagrams | Manlai |
+| Book Appointment Interaction Diagrams | Emile |
 | Issue Prescription Contracts | Nada |
 | Issue Prescription Operations | Manlai |
 | Issue Prescription SSD | Emile |
 | Issue Prescription Use Case | Nada |
-| Issue Prescription Interaction Diagrams | Manlai |
+| Issue Prescription Interaction Diagrams | Emile |
 | Register Patient Arrival Contracts | Nada |
 | Register Patient Arrival Operations | Manlai |
 | Register Patient Arrival SSD | Emile |
 | Register Patient Arrival Use Case | Nada |
-| Register Patient Arrival Interaction Diagrams | Manlai |
+| Register Patient Arrival Interaction Diagrams | Emile |
 | Search Availability SSD | Manlai |
 | Make Availability SSD | Manlai
 | Waitlist/Offer/Cancel SSDs | Manlai
