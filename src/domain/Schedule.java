@@ -15,8 +15,16 @@ public class Schedule {
     }
 
     public List<TimeSlot> findAvailable(DateRange dateRange) {
-        // TODO (Search Availability)
-        throw new UnsupportedOperationException("TODO: Schedule.findAvailable");
+        if (dateRange == null) {
+            throw new IllegalArgumentException("A date range is required.");
+        }
+        List<TimeSlot> available = new ArrayList<>();
+        for (TimeSlot slot : timeSlots) {
+            if (slot.isAvailable() && dateRange.contains(slot.getDate())) {
+                available.add(slot);
+            }
+        }
+        return available;
     }
 
     public boolean canBook(TimeSlot slot, MedicalService service) {
