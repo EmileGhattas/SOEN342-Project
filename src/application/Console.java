@@ -2,13 +2,19 @@ package application;
 
 import domain.AvailabilityCsv;
 import domain.Appointment;
+import domain.AdministrativeStaff;
 import domain.AuthorizedClinicStaff;
 import domain.DateRange;
+import domain.ExternalPhysician;
 import domain.HealthcareProfessional;
+import domain.Insurance;
 import domain.MedicalService;
 import domain.MedicalSpecialty;
 import domain.Patient;
 import domain.Referral;
+import domain.ReferralPriority;
+import domain.ReferralStatus;
+import domain.ReferralType;
 import domain.TimeSlot;
 import domain.User;
 import domain.catalog.AppointmentCatalog;
@@ -19,6 +25,7 @@ import domain.catalog.SpecialtyCatalog;
 import domain.catalog.StaffCatalog;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -59,6 +66,101 @@ public class Console {
 
     public User getCurrentUser() {
         return currentUser;
+    }
+
+    public void logout() {
+        currentUser = null;
+    }
+
+    // Bootstrap the first administrator; later setup requires a staff session.
+    public AdministrativeStaff registerStaff(int id, String password, String firstName, String lastName) {
+        for (AuthorizedClinicStaff member : staffCatalog.getAll()) {
+            if (member instanceof AdministrativeStaff) {
+                requireStaff();
+                break;
+            }
+        }
+        requireId(id);
+        if (staffCatalog.findStaff(id) != null) {
+            throw new IllegalArgumentException("A staff member already has that id.");
+        }
+        requiredText(password, "Password");
+        AdministrativeStaff staff = new AdministrativeStaff(id, password,
+                requiredText(firstName, "First name"), requiredText(lastName, "Last name"));
+        staffCatalog.add(staff);
+        return staff;
+    }
+
+    public Patient registerPatient(int id, String password, String firstName, String lastName,
+                                   LocalDate birthDate, String phone, Insurance insurance) {
+        requireStaff();
+        requireId(id);
+        if (patientCatalog.findPatient(id) != null) {
+            throw new IllegalArgumentException("A patient already has that id.");
+        }
+        if (birthDate == null) throw new IllegalArgumentException("Date of birth is required.");
+        if (insurance != null) requiredText(insurance.getHealthInsuranceNum(), "Insurance number");
+        requiredText(password, "Password");
+        Patient patient = new Patient(id, password,
+                requiredText(firstName, "First name"), requiredText(lastName, "Last name"),
+                birthDate, requiredText(phone, "Phone number"));
+        if (insurance != null) patient.addInsurance(insurance);
+        patientCatalog.add(patient);
+        return patient;
+    }
+
+    public MedicalService registerService(String name, int duration, boolean requiresReferral) {
+        requireStaff();
+        name = requiredText(name, "Service name");
+        if (serviceCatalog.findService(name) != null) {
+            throw new IllegalArgumentException("A service already has that name.");
+        }
+        MedicalService service = new MedicalService(name, duration, requiresReferral);
+        serviceCatalog.add(service);
+        return service;
+    }
+
+    // Record an existing external referral; this does not send or issue a referral.
+    public Referral recordReferral(Patient patient, MedicalSpecialty specialty, ExternalPhysician physician,
+                                   String reason, ReferralPriority priority, ReferralType type, boolean confirmed) {
+        requireStaff();
+        if (patient == null || !patientCatalog.getAll().contains(patient)) {
+            throw new IllegalArgumentException("Patient not found.");
+        }
+        if (specialty == null || !specialtyCatalog.getAll().contains(specialty)) {
+            throw new IllegalArgumentException("Specialty not found. Import professional availability first.");
+        }
+        if (physician == null || priority == null || type == null) {
+            throw new IllegalArgumentException("Referring physician, priority and type are required.");
+        }
+        requiredText(physician.getLicenseNumber(), "Referring physician licence");
+        requiredText(physician.getName(), "Referring physician name");
+        Referral referral = new Referral(requiredText(reason, "Clinical reason"), priority, type,
+                patient, specialty, physician);
+        if (confirmed) referral.setStatus(ReferralStatus.CONFIRMED);
+        referralCatalog.add(referral);
+        return referral;
+    }
+
+    public List<MedicalService> getServices() {
+        requireStaff();
+        return serviceCatalog.getAll();
+    }
+
+    public MedicalSpecialty findSpecialty(String name) {
+        requireStaff();
+        MedicalSpecialty specialty = specialtyCatalog.findSpecialty(requiredText(name, "Specialty"));
+        if (specialty == null) throw new IllegalArgumentException("Specialty not found: " + name);
+        return specialty;
+    }
+
+    private static void requireId(int id) {
+        if (id <= 0) throw new IllegalArgumentException("Id must be a positive integer.");
+    }
+
+    private static String requiredText(String text, String field) {
+        if (text == null || text.isBlank()) throw new IllegalArgumentException(field + " is required.");
+        return text.trim();
     }
 
     public Patient searchPatient(String insuranceNumber) {
