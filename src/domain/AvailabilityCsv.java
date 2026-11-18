@@ -76,7 +76,11 @@ public class AvailabilityCsv {
 
         HealthcareProfessional hcp = staffCatalog.findProfessionalByLicense(licenseNumber);
         if (hcp == null) {
-            int id = staffCatalog.getAll().size() + 1;
+            // Manual staff setup may use non-sequential ids.
+            int id = 1;
+            for (AuthorizedClinicStaff member : staffCatalog.getAll()) {
+                id = Math.max(id, Math.addExact(member.getId(), 1));
+            }
             hcp = new HealthcareProfessional(id, temporaryPassword, firstName, lastName, title, licenseNumber, specialty);
             staffCatalog.add(hcp);
         }

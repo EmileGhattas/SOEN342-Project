@@ -7,6 +7,8 @@ import domain.HealthcareProfessional;
 import domain.MedicalService;
 import domain.Patient;
 import domain.Referral;
+import domain.ReferralStatus;
+import domain.SlotStatus;
 import domain.TimeSlot;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -21,8 +23,30 @@ public class AppointmentCatalog extends Catalog<Appointment> {
     }
 
     public Appointment createAppointment(Patient patient, HealthcareProfessional hcp, TimeSlot slot, MedicalService service, AuthorizedClinicStaff staff, Referral ref) {
-        // TODO (Book Appointment)
-        throw new UnsupportedOperationException("TODO: AppointmentCatalog.createAppointment");
+        if (patient == null || hcp == null || service == null || staff == null) {
+            throw new IllegalArgumentException("Patient, professional, service and requesting staff are required.");
+        }
+        if (!hcp.getSchedule().canBook(slot, service)) {
+            throw new IllegalArgumentException("The selected time slot is unavailable or cannot fit the service.");
+        }
+        if (service.requiresReferral() && ref == null) {
+            throw new IllegalArgumentException("A confirmed referral is required for this service.");
+        }
+        if (ref != null && (ref.getPatient() != patient
+                || ref.getStatus() != ReferralStatus.CONFIRMED
+                || ref.getSpecialty() == null || hcp.getSpecialty() == null
+                || !ref.getSpecialty().getName().equalsIgnoreCase(hcp.getSpecialty().getName()))) {
+            throw new IllegalArgumentException("The referral must be confirmed and match the patient and specialty.");
+        }
+
+        Appointment appointment = new Appointment(patient, hcp, slot, service, staff);
+        if (ref != null) {
+            appointment.setReferral(ref);
+        }
+        // Complete validation before changing the slot or the catalog.
+        slot.setStatus(SlotStatus.BOOKED);
+        add(appointment);
+        return appointment;
     }
 
     // The patient's earliest non-cancelled appointment on that date (or null)

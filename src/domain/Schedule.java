@@ -15,18 +15,26 @@ public class Schedule {
     }
 
     public List<TimeSlot> findAvailable(DateRange dateRange) {
-        // TODO (Search Availability)
-        throw new UnsupportedOperationException("TODO: Schedule.findAvailable");
+        if (dateRange == null) {
+            throw new IllegalArgumentException("A date range is required.");
+        }
+        List<TimeSlot> available = new ArrayList<>();
+        for (TimeSlot slot : timeSlots) {
+            if (slot.isAvailable() && dateRange.contains(slot.getDate())) {
+                available.add(slot);
+            }
+        }
+        return available;
     }
 
     public boolean canBook(TimeSlot slot, MedicalService service) {
-        // TODO (Book Appointment)
-        throw new UnsupportedOperationException("TODO: Schedule.canBook");
+        return slot != null && service != null && timeSlots.contains(slot)
+                && slot.isAvailable() && meetsSchedulingConstraints(slot, service);
     }
 
     private boolean meetsSchedulingConstraints(TimeSlot slot, MedicalService service) {
-        // TODO (Book Appointment)
-        throw new UnsupportedOperationException("TODO: Schedule.meetsSchedulingConstraints");
+        // This PoC books one whole slot; the service must fit inside it.
+        return slot.getDuration().compareTo(Duration.ofMinutes(service.getDuration())) >= 0;
     }
 
     // Rejects a slot that overlaps one already in the schedule

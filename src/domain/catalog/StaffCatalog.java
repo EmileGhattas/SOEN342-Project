@@ -5,6 +5,7 @@ import domain.HealthcareProfessional;
 import domain.MedicalSpecialty;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class StaffCatalog extends Catalog<AuthorizedClinicStaff> {
     private List<AuthorizedClinicStaff> staff = new ArrayList<>();
@@ -15,8 +16,26 @@ public class StaffCatalog extends Catalog<AuthorizedClinicStaff> {
     }
 
     public List<HealthcareProfessional> findProfessionals(String professional, MedicalSpecialty specialty) {
-        // TODO (Search Availability)
-        throw new UnsupportedOperationException("TODO: StaffCatalog.findProfessionals");
+        String query = professional == null ? "" : professional.trim().toLowerCase(Locale.ROOT);
+        List<HealthcareProfessional> matches = new ArrayList<>();
+        for (HealthcareProfessional hcp : getHealthcareProfessionals()) {
+            boolean professionalMatches = query.isEmpty()
+                    || hcp.getFullName().toLowerCase(Locale.ROOT).contains(query)
+                    || hcp.getLicenseNumber().equalsIgnoreCase(query);
+            boolean specialtyMatches = specialty == null || (hcp.getSpecialty() != null
+                    && hcp.getSpecialty().getName().equalsIgnoreCase(specialty.getName()));
+            if (professionalMatches && specialtyMatches) {
+                matches.add(hcp);
+            }
+        }
+        return matches;
+    }
+
+    public AuthorizedClinicStaff findStaff(int id) {
+        for (AuthorizedClinicStaff member : staff) {
+            if (member.getId() == id) return member;
+        }
+        return null;
     }
 
     // The professional with that license number, or null
