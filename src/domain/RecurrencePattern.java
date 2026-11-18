@@ -2,6 +2,8 @@ package domain;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Date;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -30,9 +32,23 @@ public class RecurrencePattern {
         return new RecurrencePattern(Set.of(), dayOfMonth);
     }
 
+    // Every date in the range that matches the pattern, in order
     public List<LocalDate> datesIn(DateRange range) {
-        // TODO (Make Availability)
-        throw new UnsupportedOperationException("TODO: RecurrencePattern.datesIn");
+        List<LocalDate> dates = new ArrayList<>();
+        for (LocalDate date = range.getStart(); range.contains(date); date=date.plusDays(1)) {
+            if (matches(date)) {
+                dates.add(date);
+            }
+        }
+        return dates;
+    }
+
+    // A month without that day has not matching dates, e.g. February 30th.
+    private boolean matches(LocalDate date) {
+        if (dayOfMonth == 0) {
+            return daysOfWeek.contains(date.getDayOfWeek());
+        }
+        return date.getDayOfMonth() == dayOfMonth;
     }
 
     @Override
