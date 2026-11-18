@@ -15,6 +15,11 @@ import domain.Referral;
 import domain.ReferralPriority;
 import domain.ReferralType;
 import domain.TimeSlot;
+import domain.HealthcareProfessional;
+import domain.RecurrencePattern;
+import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.LocalTime;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
@@ -52,7 +57,8 @@ public class CommandLine {
                 out.println("4. Staff login");
                 out.println("5. Search availability");
                 out.println("6. Book appointment");
-                out.println("7. Log out");
+                out.println("7. Make availability");
+                out.println("8. Log out");
                 out.println("0. Quit");
                 String choice = read("Choice: ");
                 if (choice.equals("0")) return;
@@ -75,11 +81,13 @@ public class CommandLine {
                     searchSlots();
                 } else if (choice.equals("6")) {
                     bookAppointment();
-                } else if (choice.equals("7")) {
+                } else if (choice.equals("7")){
+                    makeAvailability();
+                } else if (choice.equals("8")) {
                     console.logout();
                     out.println("Logged out.");
                 } else {
-                    out.println("Unknown choice, enter a number from 0 to 7.");
+                    out.println("Unknown choice, enter a number from 0 to 8.");
                 }
             } catch (NoSuchElementException e) {
                 out.println("Input closed.");
@@ -87,7 +95,7 @@ public class CommandLine {
             } catch (NumberFormatException e) {
                 out.println("Enter a whole number.");
             } catch (DateTimeParseException e) {
-                out.println("Enter dates as YYYY-MM-DD, using a valid calendar date.");
+                out.println("Enter dates as YYYY-MM-DD and times as HH:MM, using valid calendar dates and times.");
             } catch (NoSuchFileException e) {
                 out.println("File not found: " + Path.of(e.getFile()).toAbsolutePath());
             } catch (IOException e) {
@@ -224,6 +232,45 @@ public class CommandLine {
         }
         Appointment appointment = console.requestAppointment(patient, slot.getProfessional(), slot, service);
         out.println("Appointment requested: " + appointment);
+    }
+
+    private void makeAvailability(){
+        requireStaff();
+        HealthcareProfessional hcp = console.selectProfessional(read("Professional's license number: "));
+        out.println("Selected: " + hcp.getTitle() + " " + hcp.getFullName() + " (" + hcp.getSpecialty() + ")");
+        LocalDate start = LocalDate.parse(read("Start date (YYYY-MM-DD): "));
+        LocalDate end = LocalDate.parse(read("End date (YYYY-MM-DD): "));
+        DateRange range = new DateRange(start, end);
+        out.println("Repeat: 1. Weekly, 2. Monthly");
+        int repeat = readChoice("Repeat (0 to cancel): ", 2);
+        if (repeat == 0) return;
+        RecurrencePattern pattern = repeat == 1
+                ? RecurrencePattern.weekly(readDays("Day(s) of week, e.g. MON,WED: "))
+                : RecurrencePattern.monthly(readInt("Day of month (1-31): "));
+        LocalTime startTime = LocalTime.parse(read("Start time (HH:MM): "));
+        LocalTime endTime = LocalTime.parse(read("End time (HH:MM): "));
+        Duration slotLength = Duration.ofMinutes(readInt("Slot length in minutes: "));
+        List<TimeSlot> created = console.makeAvailability(range, pattern, startTime, endTime, slotLength);
+        out.println(created.size() + " time slot(s) created for " + hcp.getFullName() + ", from "
+                + created.get(0) + " to " + created.get(created.size() - 1) + ".");
+    }
+
+    // "MON, wednesday" -> MONDAY, WEDNESDAY
+    private DayOfWeek[] readDays(String prompt) {
+        String[] names = read(prompt).split(",");
+        DayOfWeek[] days = new DayOfWeek[names.length];
+        for (int i = 0; i < names.length; i++) {
+            String name = names[i].trim().toUpperCase();
+            for (DayOfWeek day : DayOfWeek.values()) {
+                if (name.length() >= 3 && day.name().startsWith(name)) {
+                    days[i] = day;
+                }
+            }
+            if (days[i] == null) {
+                throw new IllegalArgumentException("'" + names[i].trim() + "' is not a day of the week.");
+            }
+        }
+        return days;
     }
 
     private void requireStaff() {
