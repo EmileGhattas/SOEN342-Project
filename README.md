@@ -41,7 +41,7 @@ The tests use plain Java and do not require a test framework. From the repositor
 ```sh
 SOEN342_TEST_DIR="$(mktemp -d)"
 javac -encoding UTF-8 --release 11 -d "$SOEN342_TEST_DIR" $(find src tests -name '*.java')
-for SOEN342_TEST_CLASS in BookingRulesTest BookingControllerTest BookingSetupTest BookingCliTest; do
+for SOEN342_TEST_CLASS in BookingRulesTest BookingControllerTest BookingSetupTest BookingCliTest MakeAvailabilitiestest; do
     java -cp "$SOEN342_TEST_DIR" "$SOEN342_TEST_CLASS"
 done
 ```
