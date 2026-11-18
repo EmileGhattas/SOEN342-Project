@@ -49,9 +49,50 @@ public class Schedule {
         return slot;
     }
 
+    // Creates back-to-back slots of the given length for each date in the range that matches the pattern.
     public List<TimeSlot> makeAvailability(DateRange range, RecurrencePattern pattern, LocalTime startTime, LocalTime endTime, Duration slotLength) {
-        // TODO (Make Availability)
-        throw new UnsupportedOperationException("TODO: Schedule.makeAvailability");
+        // Exceptions
+        if (range == null || pattern == null || startTime == null || endTime == null || slotLength == null) {
+            throw new IllegalArgumentException("Date range, pattern, start time, end time, and slot length are required.");
+        }
+        if (!startTime.isBefore(endTime)) {
+            throw new IllegalArgumentException("Start time" + startTime + "must be before end time " + endTime);
+        }
+        long slotMinutes = slotLength.toMinutes();
+        if (slotMinutes <= 0) {
+            throw new IllegalArgumentException("Slot length must be atleast one minute.");
+        }
+        // time left over at the end of the period (shorter than one slot) is not used
+        long slotsPerDay = Duration.between(startTime, endTime).toMinutes() / slotMinutes;
+        if (slotsPerDay == 0){
+            throw new IllegalArgumentException("Slot length is longer than the period" + startTime + "-" + endTime + ".");
+        }
+
+        List<TimeSlot> created = new ArrayList<>();
+        List<TimeSlot> conflicts = new ArrayList<>();
+        for (LocalDate date : pattern.datesIn(range)) {
+            for (long i = 0; i < slotsPerDay; i++) {
+                LocalTime slotStart = startTime.plusMinutes(i * slotMinutes);
+                TimeSlot slot = new TimeSlot(this, date, slotStart, slotStart.plusMinutes(slotMinutes));
+                created.add(slot);
+                for (TimeSlot existing : timeSlots) {
+                    if (existing.overlaps(slot) && !conflicts.contains(existing)) { 
+                        // If any conflicts exist
+                        conflicts.add(existing);
+                    }
+                }
+            }
+        }
+        // No matching dates in the given range were found
+        if(created.isEmpty()) {
+            throw new IllegalArgumentException("No date in " + range + " matches" + pattern + ".");
+        }
+        // Availability has a conflict with existing time slots
+        if(!conflicts.isEmpty()) {
+            throw new IllegalArgumentException("Availability conflicts with existing time slot(s): " + conflicts);
+        }
+        timeSlots.addAll(created);
+        return created;
     }
 
     public List<TimeSlot> getTimeSlots() {
