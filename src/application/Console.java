@@ -1,5 +1,6 @@
 package application;
 
+import domain.RecurrencePattern;
 import domain.AvailabilityCsv;
 import domain.Appointment;
 import domain.AdministrativeStaff;
@@ -30,6 +31,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.time.Duration;
+import java.time.LocalTime;
 
 // Controller: Receives the system operations from the UI
 public class Console {
@@ -41,6 +44,7 @@ public class Console {
     private AppointmentCatalog appointmentCatalog;
     private AvailabilityCsv availabilityCsv;
     private User currentUser;
+    private HealthcareProfessional currentProfessional; 
 
     public Console(PatientCatalog patientCatalog, StaffCatalog staffCatalog,
                    SpecialtyCatalog specialtyCatalog, ServiceCatalog serviceCatalog,
@@ -70,6 +74,7 @@ public class Console {
 
     public void logout() {
         currentUser = null;
+        currentProfessional = null;
     }
 
     // Bootstrap the first administrator; later setup requires a staff session.
@@ -206,6 +211,26 @@ public class Console {
             throw new IllegalArgumentException("No confirmed referral matches this patient and specialty.");
         }
         return appointmentCatalog.createAppointment(patient, professional, slot, service, staff, referral);
+    }
+
+    // Make availability step 1: Choose who's schedule to add to
+    public HealthcareProfessional selectProfessional(String licenseNumber){
+        requireStaff();
+        HealthcareProfessional hcp = staffCatalog.findProfessionalByLicense(requiredText(licenseNumber, "License number"));
+        if (hcp == null) {
+            throw new IllegalArgumentException("No healthcare professional with license number " + licenseNumber + ".");
+        }
+        currentProfessional = hcp;
+        return hcp;
+    }
+
+    // Make availability step 2: return time slots created
+    public List<TimeSlot> makeAvailability(DateRange dateRange, RecurrencePattern pattern, LocalTime startTime, LocalTime endTime, Duration slotLength) {
+        requireStaff();
+        if (currentProfessional == null) {
+            throw new IllegalStateException("Select a healthcare professional first");
+        }
+        return currentProfessional.getSchedule().makeAvailability(dateRange, pattern, startTime, endTime, slotLength);
     }
 
     private AuthorizedClinicStaff requireStaff() {
