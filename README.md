@@ -4,9 +4,11 @@ Appointment Tracking System — Java CLI.
 
 ## Team
 
-- Emile Ghattas — 40282552
-- Manlai Munkhbold — 40282487
-- Nada Ouriachi — 40317294
+> **Emile Ghattas** 		(id: 40282552)			*aka. @EmileGhattas*
+>
+> **Manlai Munkhbold**	(id: 40282487)			*aka. @ManlaiM*
+>
+> **Nada Ouriachi**			(id: 40317294)			*aka. @nadaouriachi*
 
 ## Run
 
