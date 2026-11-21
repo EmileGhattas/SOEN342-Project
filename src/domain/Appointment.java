@@ -7,22 +7,20 @@ public class Appointment {
     private HealthcareProfessional professional;
     private TimeSlot timeSlot;
     private MedicalService service;
-    private AuthorizedClinicStaff requestedBy;
     private Referral referral;
     private String reason; // may be null
     private AppointmentStatus status;
     private LocalTime arrivalTime;
 
-    public Appointment(Patient patient, HealthcareProfessional hcp, TimeSlot slot, MedicalService service, AuthorizedClinicStaff staff) {
-        this(patient, hcp, slot, service, staff, null);
+    public Appointment(Patient patient, HealthcareProfessional hcp, TimeSlot slot, MedicalService service) {
+        this(patient, hcp, slot, service, null);
     }
 
-    public Appointment(Patient patient, HealthcareProfessional hcp, TimeSlot slot, MedicalService service, AuthorizedClinicStaff staff, String reason) {
+    public Appointment(Patient patient, HealthcareProfessional hcp, TimeSlot slot, MedicalService service, String reason) {
         this.patient = patient;
         this.professional = hcp;
         this.timeSlot = slot;
         this.service = service;
-        this.requestedBy = staff;
         this.reason = reason;
         if (slot.getProfessional() != hcp) {
             throw new IllegalArgumentException("Time slot " + slot + " is not in " + hcp.getName() + "'s schedule.");
@@ -75,10 +73,6 @@ public class Appointment {
 
     public MedicalService getMedicalService() {
         return service;
-    }
-
-    public AuthorizedClinicStaff getRequestedBy() {
-        return requestedBy;
     }
 
     public Referral getReferral() {

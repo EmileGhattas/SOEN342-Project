@@ -19,19 +19,19 @@ public class BookingRulesTest {
                 "Dr.", "LIC2", f.specialty);
         check(!other.getSchedule().canBook(slot, f.service), "Foreign schedule is rejected");
 
-        Appointment a = f.catalog.createAppointment(f.patient, f.hcp, slot, f.service, f.staff, null);
+        Appointment a = f.catalog.createAppointment(f.patient, f.hcp, slot, f.service, null);
         check(a.getStatus() == AppointmentStatus.REQUESTED, "Appointment starts Requested");
         check(a.getPatient() == f.patient && a.getProfessional() == f.hcp
-                && a.getTimeSlot() == slot && a.getMedicalService() == f.service
-                && a.getRequestedBy() == f.staff, "CO2 associations are retained");
+                && a.getTimeSlot() == slot && a.getMedicalService() == f.service,
+                "CO2 associations are retained");
         check(slot.getStatus() == SlotStatus.BOOKED && f.catalog.getAll().contains(a),
                 "Slot is reserved and appointment is stored");
-        rejects(() -> f.catalog.createAppointment(f.patient, f.hcp, slot, f.service, f.staff, null));
+        rejects(() -> f.catalog.createAppointment(f.patient, f.hcp, slot, f.service, null));
         check(f.catalog.getAll().size() == 1, "Double booking creates no second appointment");
 
         MedicalService specialist = new MedicalService("Specialist visit", 30, true);
         TimeSlot next = f.slot(10);
-        rejects(() -> f.catalog.createAppointment(f.patient, f.hcp, next, specialist, f.staff, null));
+        rejects(() -> f.catalog.createAppointment(f.patient, f.hcp, next, specialist, null));
         check(next.isAvailable() && f.catalog.getAll().size() == 1, "Missing referral has no state changes");
         Referral ref = new Referral("Consultation", ReferralPriority.ROUTINE, ReferralType.SPECIALIST,
                 f.patient, f.specialty, f.hcp);
@@ -39,7 +39,7 @@ public class BookingRulesTest {
         referrals.add(ref);
         check(referrals.findRequiredReferral(f.patient, f.hcp, specialist) == null,
                 "Requested referral is not accepted");
-        rejects(() -> f.catalog.createAppointment(f.patient, f.hcp, next, specialist, f.staff, ref));
+        rejects(() -> f.catalog.createAppointment(f.patient, f.hcp, next, specialist, ref));
         ref.setStatus(ReferralStatus.CONFIRMED);
         check(referrals.findRequiredReferral(f.patient, f.hcp, specialist) == ref,
                 "Confirmed matching referral is found");
@@ -48,26 +48,25 @@ public class BookingRulesTest {
         Patient stranger = new Patient(8, "pw", "Other", "Patient", LocalDate.of(2001, 1, 1), "555");
         check(referrals.findRequiredReferral(stranger, f.hcp, specialist) == null,
                 "Another patient's referral is not returned");
-        rejects(() -> f.catalog.createAppointment(stranger, f.hcp, next, specialist, f.staff, ref));
+        rejects(() -> f.catalog.createAppointment(stranger, f.hcp, next, specialist, ref));
         HealthcareProfessional dermatologist = new HealthcareProfessional(9, "pw", "Other", "Specialty",
                 "Dr.", "LIC3", new MedicalSpecialty("Dermatology"));
         TimeSlot foreign = dermatologist.getSchedule().addTimeSlot(LocalDate.of(2026, 12, 1),
                 LocalTime.of(11, 0), LocalTime.of(11, 30));
         check(referrals.findRequiredReferral(f.patient, dermatologist, specialist) == null,
                 "Wrong specialty is not returned");
-        rejects(() -> f.catalog.createAppointment(f.patient, dermatologist, foreign, specialist, f.staff, ref));
+        rejects(() -> f.catalog.createAppointment(f.patient, dermatologist, foreign, specialist, ref));
         check(foreign.isAvailable(), "Wrong referral does not reserve a slot");
-        Appointment referred = f.catalog.createAppointment(f.patient, f.hcp, next, specialist, f.staff, ref);
+        Appointment referred = f.catalog.createAppointment(f.patient, f.hcp, next, specialist, ref);
         check(referred.getReferral() == ref && next.getStatus() == SlotStatus.BOOKED,
                 "Valid referral is linked to a booked appointment");
         check(ref.getStatus() == ReferralStatus.CONFIRMED, "Booking does not consume a referral");
         TimeSlot shortSlot = f.slot(12);
         rejects(() -> f.catalog.createAppointment(f.patient, f.hcp, shortSlot,
-                new MedicalService("Long", 31, false), f.staff, null));
+                new MedicalService("Long", 31, false), null));
         check(shortSlot.isAvailable() && f.catalog.getAll().size() == 2,
                 "Duration failure leaves state unchanged");
-        rejects(() -> f.catalog.createAppointment(null, f.hcp, shortSlot, f.service, f.staff, null));
-        rejects(() -> f.catalog.createAppointment(f.patient, f.hcp, shortSlot, f.service, null, null));
+        rejects(() -> f.catalog.createAppointment(null, f.hcp, shortSlot, f.service, null));
         System.out.println("BookingRulesTest: " + checks + " checks passed");
     }
 

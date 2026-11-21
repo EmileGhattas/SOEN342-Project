@@ -69,8 +69,8 @@ public class BookingControllerTest {
         rejects(() -> console.requestAppointment(patient, alice, first, specialist));
         check(first.isAvailable() && appointments.getAll().isEmpty(), "Failed controller requests do not mutate state");
         Appointment a = console.requestAppointment(patient, alice, first, visit);
-        check(a.getRequestedBy() == clerk && a.getStatus() == AppointmentStatus.REQUESTED,
-                "Current staff and Requested status match CO2");
+        check(a.getStatus() == AppointmentStatus.REQUESTED,
+                "Requested status matches CO2");
         check(!console.searchAvailability("Alice", null, range).contains(first), "Booked slot disappears from search");
         rejects(() -> console.requestAppointment(insured, alice, first, visit));
         Referral ref = new Referral("Consultation", ReferralPriority.ROUTINE, ReferralType.SPECIALIST,

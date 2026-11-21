@@ -193,7 +193,7 @@ public class Console {
 
     public Appointment requestAppointment(Patient patient, HealthcareProfessional professional,
                                           TimeSlot slot, MedicalService service) {
-        AuthorizedClinicStaff staff = requireStaff();
+        requireStaff();
         if (patient == null || !patientCatalog.getAll().contains(patient)) {
             throw new IllegalArgumentException("Patient not found. Register the patient before booking.");
         }
@@ -210,7 +210,7 @@ public class Console {
         if (service.requiresReferral() && referral == null) {
             throw new IllegalArgumentException("No confirmed referral matches this patient and specialty.");
         }
-        return appointmentCatalog.createAppointment(patient, professional, slot, service, staff, referral);
+        return appointmentCatalog.createAppointment(patient, professional, slot, service, referral);
     }
 
     // Make availability step 1: Choose who's schedule to add to
