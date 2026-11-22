@@ -1,9 +1,14 @@
 package domain;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MedicalService {
+    private int id;
     private String name;
     private int duration; // minutes
     private boolean requiresReferral;
+    private List<Resource> resources = new ArrayList<>();
 
     public MedicalService(String name, int duration, boolean requiresReferral) {
         this.name = name;
@@ -12,6 +17,24 @@ public class MedicalService {
         }
         this.duration = duration;
         this.requiresReferral = requiresReferral;
+    }
+
+    public void addResource(Resource resource) {
+        if (!resources.contains(resource)) {
+            resources.add(resource);
+        }
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+    
+    public int getId() {
+        return id;
+    }
+
+    public List<Resource> getResources() {
+        return new ArrayList<>(resources);
     }
 
     public String getName() {

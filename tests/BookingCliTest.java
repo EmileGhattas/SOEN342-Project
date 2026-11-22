@@ -47,8 +47,8 @@ public class BookingCliTest {
                     "CLI confirms Requested appointment");
             check(f.appointments.getAll().size() == 1, "Second attempt does not create another booking");
             Appointment appointment = f.appointments.getAll().get(0);
-            check(appointment.getPatient().getId() == 10 && appointment.getRequestedBy().getId() == 2,
-                    "CLI selects the entered patient and signed-in staff");
+            check(appointment.getPatient().getId() == 10,
+                    "CLI selects the entered patient");
             check(appointment.getTimeSlot().getStatus() == SlotStatus.BOOKED, "CLI reserves selected slot");
             check(output.contains("No available time slots match this search."), "Booked slot is absent from later searches");
             check(output.contains("6 time slot(s) exported."), "CSV export remains available");

@@ -2,7 +2,6 @@ package domain.catalog;
 
 import domain.Appointment;
 import domain.AppointmentStatus;
-import domain.AuthorizedClinicStaff;
 import domain.HealthcareProfessional;
 import domain.MedicalService;
 import domain.Patient;
@@ -22,9 +21,9 @@ public class AppointmentCatalog extends Catalog<Appointment> {
         return appointments;
     }
 
-    public Appointment createAppointment(Patient patient, HealthcareProfessional hcp, TimeSlot slot, MedicalService service, AuthorizedClinicStaff staff, Referral ref) {
-        if (patient == null || hcp == null || service == null || staff == null) {
-            throw new IllegalArgumentException("Patient, professional, service and requesting staff are required.");
+    public Appointment createAppointment(Patient patient, HealthcareProfessional hcp, TimeSlot slot, MedicalService service, Referral ref) {
+        if (patient == null || hcp == null || service == null) {
+            throw new IllegalArgumentException("Patient, professional and service are required.");
         }
         if (!hcp.getSchedule().canBook(slot, service)) {
             throw new IllegalArgumentException("The selected time slot is unavailable or cannot fit the service.");
@@ -39,7 +38,7 @@ public class AppointmentCatalog extends Catalog<Appointment> {
             throw new IllegalArgumentException("The referral must be confirmed and match the patient and specialty.");
         }
 
-        Appointment appointment = new Appointment(patient, hcp, slot, service, staff);
+        Appointment appointment = new Appointment(patient, hcp, slot, service);
         if (ref != null) {
             appointment.setReferral(ref);
         }

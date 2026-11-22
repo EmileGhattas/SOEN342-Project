@@ -2,6 +2,7 @@ package domain;
 
 // A patient's referral to a specialty, requested by either a clinic professional or an external physician
 public class Referral {
+    private int id;
     private String clinicalReason;
     private ReferralPriority priority;
     private ReferralStatus status;
@@ -10,6 +11,8 @@ public class Referral {
     private MedicalSpecialty specialty;
     private HealthcareProfessional requestedByProfessional;
     private ExternalPhysician requestedByPhysician;
+    private HealthcareProfessional requestedProfessional; // may be null
+    private Consultation consultation; // may be null
 
     // Requested by a clinic professional
     public Referral(String clinicalReason, ReferralPriority priority, ReferralType type, Patient patient, MedicalSpecialty specialty, HealthcareProfessional requestedBy) {
@@ -35,6 +38,24 @@ public class Referral {
 
     public void setStatus(ReferralStatus status) {
         this.status = status;
+    }
+
+    // A specific professional the referral asks for
+    public void setRequestedProfessional(HealthcareProfessional requestedProfessional) {
+        this.requestedProfessional = requestedProfessional;
+    }
+
+    // The consultation the referral came from
+    public void setConsultation(Consultation consultation) {
+        this.consultation = consultation;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getId() {
+        return id;
     }
 
     public String getClinicalReason() {
@@ -69,6 +90,14 @@ public class Referral {
     // Null when a clinic professional requested it
     public ExternalPhysician getRequestedByPhysician() {
         return requestedByPhysician;
+    }
+
+    public HealthcareProfessional getRequestedProfessional() {
+        return requestedProfessional;
+    }
+
+    public Consultation getConsultation() {
+        return consultation;
     }
 
     @Override
