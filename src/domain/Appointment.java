@@ -3,6 +3,7 @@ package domain;
 import java.time.LocalTime;
 
 public class Appointment {
+    private int id;
     private Patient patient;
     private HealthcareProfessional professional;
     private TimeSlot timeSlot;
@@ -11,6 +12,7 @@ public class Appointment {
     private String reason; // may be null
     private AppointmentStatus status;
     private LocalTime arrivalTime;
+    private String additionalNotes; // may be null
 
     public Appointment(Patient patient, HealthcareProfessional hcp, TimeSlot slot, MedicalService service) {
         this(patient, hcp, slot, service, null);
@@ -59,6 +61,19 @@ public class Appointment {
         this.status = AppointmentStatus.ARRIVED;
     }
 
+    // Free text recorded when closing the appointment
+    public void setAdditionalNotes(String additionalNotes) {
+        this.additionalNotes = additionalNotes;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getId() {
+        return id;
+    }
+
     public Patient getPatient() {
         return patient;
     }
@@ -89,6 +104,10 @@ public class Appointment {
 
     public LocalTime getArrivalTime() {
         return arrivalTime;
+    }
+
+    public String getAdditionalNotes() {
+        return additionalNotes;
     }
 
     @Override

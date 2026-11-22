@@ -6,7 +6,9 @@ import java.time.LocalTime;
 
 // One bookable period in a professional's schedule
 public class TimeSlot {
+    private int id;
     private Schedule schedule;
+    private ClinicLocation location; // may be null
     private LocalDate date;
     private LocalTime startTime;
     private LocalTime endTime;
@@ -41,6 +43,14 @@ public class TimeSlot {
         return date.equals(other.date) && startTime.isBefore(other.endTime) && other.startTime.isBefore(endTime);
     }
 
+    public int getId() {
+        return id;
+    }
+
+    public ClinicLocation getLocation() {
+        return location;
+    }
+
     public SlotStatus getStatus() {
         return status;
     }
@@ -63,6 +73,14 @@ public class TimeSlot {
 
     public Duration getDuration() {
         return Duration.between(startTime, endTime);
+    }
+    
+    public void setId(int id) {
+        this.id = id;
+    }
+    
+    public void setLocation(ClinicLocation location) {
+        this.location = location;
     }
 
     @Override

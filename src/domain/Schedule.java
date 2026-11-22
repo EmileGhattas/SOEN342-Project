@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Schedule {
+    private int id;
     private HealthcareProfessional professional;
     private List<TimeSlot> timeSlots = new ArrayList<>();
 
@@ -95,11 +96,19 @@ public class Schedule {
         return created;
     }
 
+    public int getId() {
+        return id;
+    }
+
     public List<TimeSlot> getTimeSlots() {
         return new ArrayList<>(timeSlots);
     }
 
     public HealthcareProfessional getProfessional() {
         return professional;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 }

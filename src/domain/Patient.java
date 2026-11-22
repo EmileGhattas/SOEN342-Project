@@ -9,6 +9,7 @@ public class Patient extends User {
     private LocalDate dateOfBirth;
     private String phoneNum;
     private List<Insurance> insurances = new ArrayList<>();
+    private List<WaitlistEntry> waitlistEntries = new ArrayList<>();
 
     public Patient(int id, String password, String firstName, String lastName, LocalDate dateOfBirth, String phoneNum) {
         super(id, password, firstName, lastName, UserRole.PATIENT);
@@ -18,6 +19,10 @@ public class Patient extends User {
 
     public void addInsurance(Insurance insurance) {
         insurances.add(insurance);
+    }
+
+    public void addWaitlistEntry(WaitlistEntry entry) {
+        waitlistEntries.add(entry);
     }
 
     public boolean hasInsuranceNumber(String number) {
@@ -39,6 +44,10 @@ public class Patient extends User {
 
     public List<Insurance> getInsurances() {
         return Collections.unmodifiableList(insurances);
+    }
+
+    public List<WaitlistEntry> getWaitlistEntries() {
+        return Collections.unmodifiableList(waitlistEntries);
     }
 
     @Override

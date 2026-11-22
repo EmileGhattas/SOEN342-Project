@@ -2,12 +2,21 @@ package domain;
 
 // A physician outside the clinic who can request referrals. Not a user of the system
 public class ExternalPhysician {
+    private int id;
     private String licenseNumber;
     private String name;
 
     public ExternalPhysician(String licenseNumber, String name) {
         this.licenseNumber = licenseNumber;
         this.name = name;
+    }
+    
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getId() {
+        return id;
     }
 
     public String getLicenseNumber() {
