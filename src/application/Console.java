@@ -34,6 +34,9 @@ import java.util.Objects;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.sql.SQLException;
+import domain.ActivityLog;
+import java.time.LocalDateTime;
+import persistence.ActivityLogMapper;
 import persistence.AppointmentMapper;
 import persistence.Database;
 import persistence.ExternalPhysicianMapper;
@@ -87,6 +90,7 @@ public class Console {
         if (user == null) throw new IllegalArgumentException("Invalid id or password.");
         user.login(id, password);
         currentUser = user;
+        log(currentUser, "Logged in");
     }
 
     public User getCurrentUser() {
@@ -94,6 +98,9 @@ public class Console {
     }
 
     public void logout() {
+        if (currentUser != null) {
+            log(currentUser, "Logged out");
+        }
         currentUser = null;
         currentProfessional = null;
     }
@@ -116,7 +123,10 @@ public class Console {
         staffCatalog.add(staff);
         if (database != null) {
             try {
+                database.begin();
                 new StaffMapper(database).insert(staff);
+                log(currentUser == null ? staff : currentUser, "Added staff " + staff.getId() + " (" + staff.getFullName() + ")");
+                database.commit();
             } catch (SQLException e) {
                 throw saveFailed(e);
             }
@@ -141,7 +151,10 @@ public class Console {
         patientCatalog.add(patient);
         if (database != null) {
             try {
+                database.begin();
                 new PatientMapper(database).insert(patient);
+                log(currentUser, "Registered patient " + patient.getId() + " (" + patient.getFullName() + ")");
+                database.commit();
             } catch (SQLException e) {
                 throw saveFailed(e);
             }
@@ -159,7 +172,10 @@ public class Console {
         serviceCatalog.add(service);
         if (database != null) {
             try {
+                database.begin();
                 new MedicalServiceMapper(database).insert(service);
+                log(currentUser, "Added service " + service.getName());
+                database.commit();
             } catch (SQLException e) {
                 throw saveFailed(e);
             }
@@ -191,6 +207,7 @@ public class Console {
                 database.begin();
                 new ExternalPhysicianMapper(database).insert(physician);
                 new ReferralMapper(database).insert(referral);
+                log(currentUser, "Recorded referral " + referral.getId() + " for patient " + patient.getId()+ " to " + specialty.getName());
                 database.commit();
             } catch (SQLException e) {
                 throw saveFailed(e);
@@ -220,14 +237,23 @@ public class Console {
         return text.trim();
     }
 
+    // Viewing a patient's record is logged to protect confidentiality
     public Patient searchPatient(String insuranceNumber) {
         requireStaff();
-        return patientCatalog.findPatient(insuranceNumber);
+        Patient patient = patientCatalog.findPatient(insuranceNumber);
+        if (patient != null) {
+            log(currentUser, "Looked up patient " + patient.getId());
+        }
+        return patient;
     }
 
     public Patient searchPatient(int id) {
         requireStaff();
-        return patientCatalog.findPatient(id);
+        Patient patient = patientCatalog.findPatient(id);
+        if (patient != null) {
+            log(currentUser, "Looked up patient " + patient.getId());
+        }
+        return patient;
     }
 
     public List<TimeSlot> searchAvailability(String professional, MedicalSpecialty specialty, DateRange range) {
@@ -268,6 +294,8 @@ public class Console {
                 database.begin();
                 new TimeSlotMapper(database).update(slot);
                 new AppointmentMapper(database).insert(appointment);
+                log(currentUser, "Booked appointment " + appointment.getId() + " for patient " + patient.getId()
+                        + " with " + professional.getFullName() + " on " + slot);
                 database.commit();
             } catch (SQLException e) {
                 throw saveFailed(e);
@@ -301,6 +329,7 @@ public class Console {
                 for (TimeSlot slot : created) {
                     slotMapper.insert(slot);
                 }
+                log(currentUser, "Made " + created.size() + " time slot(s) available for "+ currentProfessional.getFullName());
                 database.commit();
             } catch (SQLException e) {
                 throw saveFailed(e);
@@ -320,12 +349,12 @@ public class Console {
         try {
             return availabilityCsv.importAvailabilities(source);
         } finally {
-            saveImported();
+            saveImported(source);
         }
     }
 
     // The import creates specialties, professionals and slots. The ones not saved yet have no id
-    private void saveImported() {
+    private void saveImported(Path source) {
         if (database == null) {
             return;
         }
@@ -339,6 +368,7 @@ public class Console {
             }
             StaffMapper staffMapper = new StaffMapper(database);
             TimeSlotMapper slotMapper = new TimeSlotMapper(database);
+            int saved = 0;
             for (HealthcareProfessional hcp : staffCatalog.getHealthcareProfessionals()) {
                 // A schedule id is 0 until it is saved
                 if (hcp.getSchedule().getId() == 0) {
@@ -347,10 +377,24 @@ public class Console {
                 for (TimeSlot slot : hcp.getSchedule().getTimeSlots()) {
                     if (slot.getId() == 0) {
                         slotMapper.insert(slot);
+                        saved++;
                     }
                 }
             }
+            log(currentUser, "Imported " + saved + " time slot(s) from " + source.getFileName());
             database.commit();
+        } catch (SQLException e) {
+            throw saveFailed(e);
+        }
+    }
+
+    // Records who did what for accountability
+    private void log(User user, String action) {
+        if (database == null) {
+            return;
+        }
+        try {
+            new ActivityLogMapper(database).insert(new ActivityLog(user, action, LocalDateTime.now()));
         } catch (SQLException e) {
             throw saveFailed(e);
         }
