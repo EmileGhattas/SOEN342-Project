@@ -30,4 +30,4 @@ java -cp "out;lib/*" App
 
 IntelliJ: add `lib/` as a library (Project Structure → Libraries), then run `src/App.java`.
 
-Create a staff account in **Setup**, log in, import `data/availabilities.csv`, then add a patient and service to book an appointment. Records stay in memory; CSV export saves availability only.
+Create a staff account in **Setup**, log in, import `data/availabilities.csv`, then add a patient and service to book an appointment. Everything is saved in `data/appointment_tracking.db` (SQLite); delete that file to start over.

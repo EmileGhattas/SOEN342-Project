@@ -30,35 +30,17 @@ public class Appointment {
         this.status = AppointmentStatus.REQUESTED;
     }
 
-    // A cancelled or completed appointment cannot change. cancelling frees the time slot
     public void setStatus(AppointmentStatus status) {
-        if (this.status == AppointmentStatus.CANCELLED || this.status == AppointmentStatus.COMPLETED) {
-            throw new IllegalStateException("Appointment is already " + this.status + ".");
-        }
         this.status = status;
-        if (status == AppointmentStatus.CANCELLED) {
-            timeSlot.setStatus(SlotStatus.AVAILABLE);
-        }
     }
 
-    // Only a confirmed referral for this patient can be used
+    // The referral is checked when booking (AppointmentCatalog.createAppointment)
     public void setReferral(Referral ref) {
-        if (ref.getPatient() != patient) {
-            throw new IllegalArgumentException("Referral is for another patient.");
-        }
-        if (ref.getStatus() != ReferralStatus.CONFIRMED) {
-            throw new IllegalArgumentException("Referral is not confirmed (status is " + ref.getStatus() + ").");
-        }
         this.referral = ref;
     }
 
-    // Registers the patient's arrival
     public void setArrivalTime(LocalTime arrivalTime) {
-        if (status != AppointmentStatus.REQUESTED && status != AppointmentStatus.CONFIRMED) {
-            throw new IllegalStateException("Cannot register arrival: appointment is " + status + ".");
-        }
         this.arrivalTime = arrivalTime;
-        this.status = AppointmentStatus.ARRIVED;
     }
 
     // Free text recorded when closing the appointment

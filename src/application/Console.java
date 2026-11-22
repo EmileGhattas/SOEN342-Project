@@ -33,6 +33,16 @@ import java.util.List;
 import java.util.Objects;
 import java.time.Duration;
 import java.time.LocalTime;
+import java.sql.SQLException;
+import persistence.AppointmentMapper;
+import persistence.Database;
+import persistence.ExternalPhysicianMapper;
+import persistence.MedicalServiceMapper;
+import persistence.PatientMapper;
+import persistence.ReferralMapper;
+import persistence.SpecialtyMapper;
+import persistence.StaffMapper;
+import persistence.TimeSlotMapper;
 
 // Controller: Receives the system operations from the UI
 public class Console {
@@ -44,12 +54,23 @@ public class Console {
     private AppointmentCatalog appointmentCatalog;
     private AvailabilityCsv availabilityCsv;
     private User currentUser;
-    private HealthcareProfessional currentProfessional; 
+    private HealthcareProfessional currentProfessional;
+    private Database database;
 
     public Console(PatientCatalog patientCatalog, StaffCatalog staffCatalog,
                    SpecialtyCatalog specialtyCatalog, ServiceCatalog serviceCatalog,
                    ReferralCatalog referralCatalog, AppointmentCatalog appointmentCatalog,
                    AvailabilityCsv availabilityCsv) {
+        this(patientCatalog, staffCatalog, specialtyCatalog, serviceCatalog, referralCatalog, appointmentCatalog,
+                availabilityCsv, null);
+    }
+
+    // Saves every change to the database
+    public Console(PatientCatalog patientCatalog, StaffCatalog staffCatalog,
+                   SpecialtyCatalog specialtyCatalog, ServiceCatalog serviceCatalog,
+                   ReferralCatalog referralCatalog, AppointmentCatalog appointmentCatalog,
+                   AvailabilityCsv availabilityCsv, Database database) {
+        this.database = database;
         this.patientCatalog = Objects.requireNonNull(patientCatalog);
         this.staffCatalog = Objects.requireNonNull(staffCatalog);
         this.specialtyCatalog = Objects.requireNonNull(specialtyCatalog);
@@ -93,6 +114,13 @@ public class Console {
         AdministrativeStaff staff = new AdministrativeStaff(id, password,
                 requiredText(firstName, "First name"), requiredText(lastName, "Last name"));
         staffCatalog.add(staff);
+        if (database != null) {
+            try {
+                new StaffMapper(database).insert(staff);
+            } catch (SQLException e) {
+                throw saveFailed(e);
+            }
+        }
         return staff;
     }
 
@@ -111,6 +139,13 @@ public class Console {
                 birthDate, requiredText(phone, "Phone number"));
         if (insurance != null) patient.addInsurance(insurance);
         patientCatalog.add(patient);
+        if (database != null) {
+            try {
+                new PatientMapper(database).insert(patient);
+            } catch (SQLException e) {
+                throw saveFailed(e);
+            }
+        }
         return patient;
     }
 
@@ -122,6 +157,13 @@ public class Console {
         }
         MedicalService service = new MedicalService(name, duration, requiresReferral);
         serviceCatalog.add(service);
+        if (database != null) {
+            try {
+                new MedicalServiceMapper(database).insert(service);
+            } catch (SQLException e) {
+                throw saveFailed(e);
+            }
+        }
         return service;
     }
 
@@ -144,6 +186,16 @@ public class Console {
                 patient, specialty, physician);
         if (confirmed) referral.setStatus(ReferralStatus.CONFIRMED);
         referralCatalog.add(referral);
+        if (database != null) {
+            try {
+                database.begin();
+                new ExternalPhysicianMapper(database).insert(physician);
+                new ReferralMapper(database).insert(referral);
+                database.commit();
+            } catch (SQLException e) {
+                throw saveFailed(e);
+            }
+        }
         return referral;
     }
 
@@ -210,7 +262,18 @@ public class Console {
         if (service.requiresReferral() && referral == null) {
             throw new IllegalArgumentException("No confirmed referral matches this patient and specialty.");
         }
-        return appointmentCatalog.createAppointment(patient, professional, slot, service, referral);
+        Appointment appointment = appointmentCatalog.createAppointment(patient, professional, slot, service, referral);
+        if (database != null) {
+            try {
+                database.begin();
+                new TimeSlotMapper(database).update(slot);
+                new AppointmentMapper(database).insert(appointment);
+                database.commit();
+            } catch (SQLException e) {
+                throw saveFailed(e);
+            }
+        }
+        return appointment;
     }
 
     // Make availability step 1: Choose who's schedule to add to
@@ -230,7 +293,20 @@ public class Console {
         if (currentProfessional == null) {
             throw new IllegalStateException("Select a healthcare professional first");
         }
-        return currentProfessional.getSchedule().makeAvailability(dateRange, pattern, startTime, endTime, slotLength);
+        List<TimeSlot> created = currentProfessional.getSchedule().makeAvailability(dateRange, pattern, startTime, endTime, slotLength);
+        if (database != null) {
+            try {
+                database.begin();
+                TimeSlotMapper slotMapper = new TimeSlotMapper(database);
+                for (TimeSlot slot : created) {
+                    slotMapper.insert(slot);
+                }
+                database.commit();
+            } catch (SQLException e) {
+                throw saveFailed(e);
+            }
+        }
+        return created;
     }
 
     private AuthorizedClinicStaff requireStaff() {
@@ -241,7 +317,53 @@ public class Console {
     }
 
     public int importAvailabilities(Path source) throws IOException {
-        return availabilityCsv.importAvailabilities(source);
+        try {
+            return availabilityCsv.importAvailabilities(source);
+        } finally {
+            saveImported();
+        }
+    }
+
+    // The import creates specialties, professionals and slots. The ones not saved yet have no id
+    private void saveImported() {
+        if (database == null) {
+            return;
+        }
+        try {
+            database.begin();
+            SpecialtyMapper specialtyMapper = new SpecialtyMapper(database);
+            for (MedicalSpecialty specialty : specialtyCatalog.getAll()) {
+                if (specialty.getId() == 0) {
+                    specialtyMapper.insert(specialty);
+                }
+            }
+            StaffMapper staffMapper = new StaffMapper(database);
+            TimeSlotMapper slotMapper = new TimeSlotMapper(database);
+            for (HealthcareProfessional hcp : staffCatalog.getHealthcareProfessionals()) {
+                // A schedule id is 0 until it is saved
+                if (hcp.getSchedule().getId() == 0) {
+                    staffMapper.insert(hcp);
+                }
+                for (TimeSlot slot : hcp.getSchedule().getTimeSlots()) {
+                    if (slot.getId() == 0) {
+                        slotMapper.insert(slot);
+                    }
+                }
+            }
+            database.commit();
+        } catch (SQLException e) {
+            throw saveFailed(e);
+        }
+    }
+
+    // Cancels the unfinished transaction and reports the problem to the user
+    private IllegalStateException saveFailed(SQLException e) {
+        try {
+            database.rollback();
+        } catch (SQLException ignored) {
+            // Nothing to do
+        }
+        return new IllegalStateException("Could not save to the database: " + e.getMessage());
     }
 
     public int exportAvailabilities(Path target) throws IOException {
