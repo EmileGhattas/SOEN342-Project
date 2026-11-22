@@ -1,4 +1,5 @@
 import application.Console;
+import application.SampleData;
 import domain.AuthorizedClinicStaff;
 import domain.AvailabilityCsv;
 import domain.Clinic;
@@ -15,6 +16,7 @@ import domain.catalog.PatientCatalog;
 import domain.catalog.ServiceCatalog;
 import domain.catalog.ReferralCatalog;
 import domain.catalog.AppointmentCatalog;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import persistence.AppointmentMapper;
@@ -33,7 +35,7 @@ import persistence.WaitlistEntryMapper;
 import ui.CommandLine;
 
 public class App {
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) throws SQLException, IOException {
         Database database = new Database();
         StaffCatalog staffCatalog = new StaffCatalog();
         SpecialtyCatalog specialtyCatalog = new SpecialtyCatalog();
@@ -48,6 +50,12 @@ public class App {
         AvailabilityCsv availabilityCsv = new AvailabilityCsv(staffCatalog, specialtyCatalog, "changeit");
         Console console = new Console(patientCatalog, staffCatalog, specialtyCatalog,
                 serviceCatalog, referralCatalog, appointmentCatalog, availabilityCsv, database);
+
+        // An empty database gets sample records
+        if (staffCatalog.getAll().isEmpty()) {
+            SampleData.load(console);
+            System.out.println("Sample data loaded. Log in with staff id 1, password admin.");
+        }
         new CommandLine(console).run();
         database.close();
     }
