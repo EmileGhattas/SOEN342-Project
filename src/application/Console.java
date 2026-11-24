@@ -338,6 +338,13 @@ public class Console {
         return created;
     }
 
+    private AdministrativeStaff requireAdministrativeStaff() {
+        if (!(currentUser instanceof AdministrativeStaff)) {
+            throw new IllegalStateException("Log in as administrative staff first.");
+        }
+        return (AdministrativeStaff) currentUser;
+    }
+
     private AuthorizedClinicStaff requireStaff() {
         if (!(currentUser instanceof AuthorizedClinicStaff)) {
             throw new IllegalStateException("Log in as clinic staff first.");
