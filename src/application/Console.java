@@ -199,7 +199,7 @@ public class Console {
         requiredText(physician.getLicenseNumber(), "Referring physician licence");
         requiredText(physician.getName(), "Referring physician name");
         Referral referral = new Referral(requiredText(reason, "Clinical reason"), priority, type,
-                patient, specialty, physician);
+                patient, specialty, null, physician);
         if (confirmed) referral.setStatus(ReferralStatus.CONFIRMED);
         referralCatalog.add(referral);
         if (database != null) {

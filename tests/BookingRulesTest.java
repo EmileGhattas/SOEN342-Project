@@ -34,7 +34,7 @@ public class BookingRulesTest {
         rejects(() -> f.catalog.createAppointment(f.patient, f.hcp, next, specialist, null));
         check(next.isAvailable() && f.catalog.getAll().size() == 1, "Missing referral has no state changes");
         Referral ref = new Referral("Consultation", ReferralPriority.ROUTINE, ReferralType.SPECIALIST,
-                f.patient, f.specialty, f.hcp);
+                f.patient, f.specialty, null, f.hcp);
         ReferralCatalog referrals = new ReferralCatalog();
         referrals.add(ref);
         check(referrals.findRequiredReferral(f.patient, f.hcp, specialist) == null,
