@@ -66,16 +66,16 @@ public class ReferralMapper extends Mapper {
 
                 // The requester column that is filled in decides which constructor to use
                 Referral referral;
+                HealthcareProfessional requestedProfessional = findProfessional(staff, rs.getInt("requestedProfessionalId"));
                 HealthcareProfessional referringProfessional = findProfessional(staff, rs.getInt("referringProfessionalId"));
                 if (referringProfessional != null) {
-                    referral = new Referral(reason, priority, type, patient, specialty, referringProfessional);
+                    referral = new Referral(reason, priority, type, patient, specialty, requestedProfessional, referringProfessional);
                 } else {
-                    referral = new Referral(reason, priority, type, patient, specialty,
+                    referral = new Referral(reason, priority, type, patient, specialty, requestedProfessional,
                             findPhysician(physicians, rs.getInt("externalPhysicianId")));
                 }
                 referral.setId(rs.getInt("id"));
                 referral.setStatus(ReferralStatus.valueOf(rs.getString("status")));
-                referral.setRequestedProfessional(findProfessional(staff, rs.getInt("requestedProfessionalId")));
                 referrals.add(referral);
             }
         }

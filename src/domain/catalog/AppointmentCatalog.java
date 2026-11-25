@@ -7,6 +7,7 @@ import domain.MedicalService;
 import domain.Patient;
 import domain.Referral;
 import domain.ReferralStatus;
+import domain.Resource;
 import domain.SlotStatus;
 import domain.TimeSlot;
 import java.time.LocalDate;
@@ -38,6 +39,16 @@ public class AppointmentCatalog extends Catalog<Appointment> {
             throw new IllegalArgumentException("The referral must be confirmed and match the patient and specialty.");
         }
 
+        // No resources may be double booked
+        for (Appointment existing : appointments) {
+            if (existing.getStatus() != AppointmentStatus.CANCELLED && existing.getTimeSlot().overlaps(slot)) {
+                for (Resource resource : service.getResources()) {
+                    if (existing.getMedicalService().getResources().contains(resource)) {
+                        throw new IllegalArgumentException("Resource " + resource + " is already booked at " + slot + ".");
+                    }
+                }
+            }
+        }
         Appointment appointment = new Appointment(patient, hcp, slot, service);
         if (ref != null) {
             appointment.setReferral(ref);

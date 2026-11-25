@@ -74,7 +74,7 @@ public class BookingControllerTest {
         check(!console.searchAvailability("Alice", null, range).contains(first), "Booked slot disappears from search");
         rejects(() -> console.requestAppointment(insured, alice, first, visit));
         Referral ref = new Referral("Consultation", ReferralPriority.ROUTINE, ReferralType.SPECIALIST,
-                patient, cardio, alice);
+                patient, cardio, null, alice);
         ref.setStatus(ReferralStatus.CONFIRMED);
         referrals.add(ref);
         check(console.requestAppointment(patient, alice, last, specialist).getReferral() == ref,
