@@ -18,6 +18,9 @@ import domain.ReferralStatus;
 import domain.ReferralType;
 import domain.TimeSlot;
 import domain.User;
+import domain.AppointmentStatus;
+import domain.WaitlistEntry;
+import domain.catalog.WaitlistCatalog;
 import domain.catalog.AppointmentCatalog;
 import domain.catalog.PatientCatalog;
 import domain.catalog.ReferralCatalog;
@@ -46,6 +49,7 @@ import persistence.ReferralMapper;
 import persistence.SpecialtyMapper;
 import persistence.StaffMapper;
 import persistence.TimeSlotMapper;
+import persistence.WaitlistEntryMapper;
 
 // Controller: Receives the system operations from the UI
 public class Console {
@@ -56,6 +60,7 @@ public class Console {
     private ReferralCatalog referralCatalog;
     private AppointmentCatalog appointmentCatalog;
     private AvailabilityCsv availabilityCsv;
+    private WaitlistCatalog waitlistCatalog;
     private User currentUser;
     private HealthcareProfessional currentProfessional;
     private Database database;
@@ -68,12 +73,21 @@ public class Console {
                 availabilityCsv, null);
     }
 
-    // Saves every change to the database
     public Console(PatientCatalog patientCatalog, StaffCatalog staffCatalog,
                    SpecialtyCatalog specialtyCatalog, ServiceCatalog serviceCatalog,
                    ReferralCatalog referralCatalog, AppointmentCatalog appointmentCatalog,
                    AvailabilityCsv availabilityCsv, Database database) {
+        this(patientCatalog, staffCatalog, specialtyCatalog, serviceCatalog, referralCatalog, appointmentCatalog,
+                availabilityCsv, new WaitlistCatalog(), database);
+    }
+
+    // Saves every change to the database
+    public Console(PatientCatalog patientCatalog, StaffCatalog staffCatalog,
+                   SpecialtyCatalog specialtyCatalog, ServiceCatalog serviceCatalog,
+                   ReferralCatalog referralCatalog, AppointmentCatalog appointmentCatalog,
+                   AvailabilityCsv availabilityCsv, WaitlistCatalog waitlistCatalog, Database database) {
         this.database = database;
+        this.waitlistCatalog = Objects.requireNonNull(waitlistCatalog);
         this.patientCatalog = Objects.requireNonNull(patientCatalog);
         this.staffCatalog = Objects.requireNonNull(staffCatalog);
         this.specialtyCatalog = Objects.requireNonNull(specialtyCatalog);
@@ -272,6 +286,24 @@ public class Console {
     public Appointment requestAppointment(Patient patient, HealthcareProfessional professional,
                                           TimeSlot slot, MedicalService service) {
         requireStaff();
+        Appointment appointment = book(patient, professional, slot, service);
+        if (database != null) {
+            try {
+                database.begin();
+                new TimeSlotMapper(database).update(slot);
+                new AppointmentMapper(database).insert(appointment);
+                log(currentUser, "Booked appointment " + appointment.getId() + " for patient " + patient.getId()
+                        + " with " + professional.getFullName() + " on " + slot);
+                database.commit();
+            } catch (SQLException e) {
+                throw saveFailed(e);
+            }
+        }
+        return appointment;
+    }
+
+    // Shared by Request Appointment and Accept Offer: checks every booking rule, then creates the appointment
+    private Appointment book(Patient patient, HealthcareProfessional professional, TimeSlot slot, MedicalService service) {
         if (patient == null || !patientCatalog.getAll().contains(patient)) {
             throw new IllegalArgumentException("Patient not found. Register the patient before booking.");
         }
@@ -288,20 +320,125 @@ public class Console {
         if (service.requiresReferral() && referral == null) {
             throw new IllegalArgumentException("No confirmed referral matches this patient and specialty.");
         }
-        Appointment appointment = appointmentCatalog.createAppointment(patient, professional, slot, service, referral);
+        return appointmentCatalog.createAppointment(patient, professional, slot, service, referral);
+    }
+
+    // Request Placement on Waitlist
+    public WaitlistEntry requestWaitlistPlacement(Patient patient, HealthcareProfessional professional,
+                                                  MedicalSpecialty specialty, DateRange dateRange, int priority) {
+        requireStaff();
+        if (patient == null || !patientCatalog.getAll().contains(patient)) {
+            throw new IllegalArgumentException("Patient not found.");
+        }
+        WaitlistEntry entry = waitlistCatalog.createEntry(patient, professional, specialty, dateRange, priority);
+        if (database != null) {
+            try {
+                database.begin();
+                new WaitlistEntryMapper(database).insert(entry);
+                log(currentUser, "Waitlisted patient " + patient.getId() + " (entry " + entry.getId() + ")");
+                database.commit();
+            } catch (SQLException e) {
+                throw saveFailed(e);
+            }
+        }
+        return entry;
+    }
+
+    // Plain lookup; selectProfessional() would change Make Availability's state
+    public HealthcareProfessional findProfessional(String licenseNumber) {
+        requireStaff();
+        HealthcareProfessional hcp = staffCatalog.findProfessionalByLicense(requiredText(licenseNumber, "License number"));
+        if (hcp == null) throw new IllegalArgumentException("No healthcare professional with license number " + licenseNumber + ".");
+        return hcp;
+    }
+
+    public List<WaitlistEntry> getWaitlist() {
+        requireStaff();
+        return waitlistCatalog.getWaiting();
+    }
+
+    public WaitlistEntry findWaitlistEntry(int id) {
+        requireStaff();
+        WaitlistEntry entry = waitlistCatalog.findEntry(id);
+        if (entry == null) throw new IllegalArgumentException("No waitlist entry with id " + id + ".");
+        return entry;
+    }
+
+    // Identify Eligible Waitlisted Patients, highest priority first
+    public List<WaitlistEntry> identifyEligibleWaitlistedPatients(TimeSlot slot) {
+        requireStaff();
+        if (slot == null) throw new IllegalArgumentException("A time slot is required.");
+        return waitlistCatalog.findEligible(slot);
+    }
+
+    // Offer Appointment: returns the entry so staff can phone the patient. Nothing changes yet
+    public WaitlistEntry offerAppointment(WaitlistEntry entry, TimeSlot slot) {
+        requireAdministrativeStaff();
+        requireEligible(entry, slot);
+        log(currentUser, "Offered " + slot + " to waitlist entry " + entry.getId());
+        return entry;
+    }
+
+    // The patient accepted the offer on the phone: book and confirm the appointment
+    public Appointment acceptOffer(WaitlistEntry entry, TimeSlot slot, MedicalService service) {
+        requireAdministrativeStaff();
+        requireEligible(entry, slot);
+        Appointment appointment = book(entry.getPatient(), slot.getProfessional(), slot, service);
+        appointment.setStatus(AppointmentStatus.CONFIRMED);
+        entry.fulfil();
         if (database != null) {
             try {
                 database.begin();
                 new TimeSlotMapper(database).update(slot);
                 new AppointmentMapper(database).insert(appointment);
-                log(currentUser, "Booked appointment " + appointment.getId() + " for patient " + patient.getId()
-                        + " with " + professional.getFullName() + " on " + slot);
+                new WaitlistEntryMapper(database).update(entry);
+                log(currentUser, "Waitlist entry " + entry.getId() + " accepted appointment " + appointment.getId());
                 database.commit();
             } catch (SQLException e) {
                 throw saveFailed(e);
             }
         }
         return appointment;
+    }
+
+    public void removeFromWaitlist(WaitlistEntry entry) {
+        requireAdministrativeStaff();
+        requireEntry(entry);
+        entry.remove();
+        saveEntry(entry, "Removed waitlist entry " + entry.getId());
+    }
+
+    public WaitlistEntry changeWaitlistPriority(WaitlistEntry entry, int newPriority) {
+        requireAdministrativeStaff();
+        requireEntry(entry);
+        entry.changePriority(newPriority);
+        saveEntry(entry, "Changed priority of waitlist entry " + entry.getId() + " to " + newPriority);
+        return entry;
+    }
+
+    private void requireEntry(WaitlistEntry entry) {
+        if (entry == null || !waitlistCatalog.getAll().contains(entry)) {
+            throw new IllegalArgumentException("Waitlist entry not found.");
+        }
+    }
+
+    private void requireEligible(WaitlistEntry entry, TimeSlot slot) {
+        requireEntry(entry);
+        if (!entry.isEligibleFor(slot)) {
+            throw new IllegalArgumentException("This time slot does not match the waitlist entry or is not available.");
+        }
+    }
+
+    private void saveEntry(WaitlistEntry entry, String action) {
+        if (database == null) return;
+        try {
+            database.begin();
+            new WaitlistEntryMapper(database).update(entry);
+            log(currentUser, action);
+            database.commit();
+        } catch (SQLException e) {
+            throw saveFailed(e);
+        }
     }
 
     // Make availability step 1: Choose who's schedule to add to
