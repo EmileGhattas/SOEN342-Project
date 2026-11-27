@@ -17,6 +17,7 @@ import domain.ReferralType;
 import domain.TimeSlot;
 import domain.HealthcareProfessional;
 import domain.RecurrencePattern;
+import domain.WaitlistEntry;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalTime;
@@ -59,6 +60,7 @@ public class CommandLine {
                 out.println("6. Book appointment");
                 out.println("7. Make availability");
                 out.println("8. Log out");
+                out.println("9. Waitlist");
                 out.println("0. Quit");
                 String choice = read("Choice: ");
                 if (choice.equals("0")) return;
@@ -86,8 +88,10 @@ public class CommandLine {
                 } else if (choice.equals("8")) {
                     console.logout();
                     out.println("Logged out.");
+                } else if (choice.equals("9")) {
+                    waitlist();
                 } else {
-                    out.println("Unknown choice, enter a number from 0 to 8.");
+                    out.println("Unknown choice, enter a number from 0 to 9.");
                 }
             } catch (NoSuchElementException e) {
                 out.println("Input closed.");
@@ -221,7 +225,10 @@ public class CommandLine {
         int serviceChoice = readChoice("Service (0 to cancel): ", services.size());
         if (serviceChoice == 0) return;
         List<TimeSlot> slots = searchSlots();
-        if (slots.isEmpty()) return;
+        if (slots.isEmpty()) {
+            if (yes("Place the patient on the waitlist instead? (y/n): ")) placeOnWaitlist(patient);
+            return;
+        }
         int slotChoice = readChoice("Time slot (0 to cancel): ", slots.size());
         if (slotChoice == 0) return;
         TimeSlot slot = slots.get(slotChoice - 1);
@@ -253,6 +260,91 @@ public class CommandLine {
         List<TimeSlot> created = console.makeAvailability(range, pattern, startTime, endTime, slotLength);
         out.println(created.size() + " time slot(s) created for " + hcp.getFullName() + ", from "
                 + created.get(0) + " to " + created.get(created.size() - 1) + ".");
+    }
+
+    private void waitlist() {
+        requireStaff();
+        out.println("1. Place patient on waitlist");
+        out.println("2. View waitlist");
+        out.println("3. Offer an available time slot");
+        out.println("4. Change priority");
+        out.println("5. Remove patient from waitlist");
+        int choice = readChoice("Waitlist choice (0 to go back): ", 5);
+        if (choice == 1) {
+            Patient patient = readPatient();
+            if (patient != null) placeOnWaitlist(patient);
+        } else if (choice == 2) {
+            printWaitlist();
+        } else if (choice == 3) {
+            List<TimeSlot> slots = searchSlots();
+            if (slots.isEmpty()) return;
+            int slotChoice = readChoice("Time slot to offer (0 to cancel): ", slots.size());
+            if (slotChoice != 0) offerSlot(slots.get(slotChoice - 1));
+        } else if (choice == 4) {
+            if (printWaitlist()) {
+                WaitlistEntry entry = console.findWaitlistEntry(readInt("Entry id: "));
+                out.println("Updated: " + console.changeWaitlistPriority(entry, readInt("New priority (1 = highest): ")));
+            }
+        } else if (choice == 5) {
+            if (printWaitlist()) {
+                console.removeFromWaitlist(console.findWaitlistEntry(readInt("Entry id: ")));
+                out.println("Patient removed from the waitlist.");
+            }
+        }
+    }
+
+    private void placeOnWaitlist(Patient patient) {
+        String professionalLicence = read("Professional's licence (blank for any): ");
+        HealthcareProfessional professional = professionalLicence.isEmpty() ? null
+                : console.findProfessional(professionalLicence);
+        String specialtyName = read("Specialty (blank for any): ");
+        MedicalSpecialty specialty = specialtyName.isEmpty() ? null : console.findSpecialty(specialtyName);
+        DateRange range = null;
+        String start = read("Earliest date YYYY-MM-DD (blank for any): ");
+        if (!start.isEmpty()) {
+            range = new DateRange(LocalDate.parse(start), LocalDate.parse(read("Latest date (YYYY-MM-DD): ")));
+        }
+        int priority = readInt("Priority (1 = highest): ");
+        WaitlistEntry entry = console.requestWaitlistPlacement(patient, professional, specialty, range, priority);
+        out.println("Waitlisted: " + entry);
+    }
+
+    private boolean printWaitlist() {
+        List<WaitlistEntry> entries = console.getWaitlist();
+        if (entries.isEmpty()) out.println("Nobody is waiting.");
+        for (WaitlistEntry entry : entries) {
+            out.println(entry);
+        }
+        return !entries.isEmpty();
+    }
+
+    // Identify eligible patients for the slot, phone the chosen one, then accept or decline
+    private void offerSlot(TimeSlot slot) {
+        List<WaitlistEntry> eligible = console.identifyEligibleWaitlistedPatients(slot);
+        if (eligible.isEmpty()) {
+            out.println("No waitlisted patient matches " + slot + ".");
+            return;
+        }
+        for (int i = 0; i < eligible.size(); i++) {
+            out.println((i + 1) + ". " + eligible.get(i));
+        }
+        int choice = readChoice("Patient to offer it to (0 to cancel): ", eligible.size());
+        if (choice == 0) return;
+        WaitlistEntry entry = console.offerAppointment(eligible.get(choice - 1), slot);
+        out.println("Phone " + entry.getPatient().getFullName() + " at " + entry.getPatient().getPhoneNum()
+                + " to offer " + slot.getProfessional().getFullName() + " on " + slot + ".");
+        if (yes("Did the patient accept? (y/n): ")) {
+            List<MedicalService> services = console.getServices();
+            for (int i = 0; i < services.size(); i++) {
+                out.println((i + 1) + ". " + services.get(i));
+            }
+            int service = readChoice("Service (0 to cancel): ", services.size());
+            if (service == 0) return;
+            out.println("Appointment confirmed: " + console.acceptOffer(entry, slot, services.get(service - 1)));
+        } else if (yes("Remove the patient from the waitlist? (y/n): ")) {
+            console.removeFromWaitlist(entry);
+            out.println("Patient removed from the waitlist.");
+        }
     }
 
     // "MON, wednesday" -> MONDAY, WEDNESDAY

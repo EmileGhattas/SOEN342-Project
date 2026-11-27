@@ -158,12 +158,14 @@ public class Database {
                     + "id INTEGER PRIMARY KEY, "
                     + "priority INTEGER NOT NULL, "
                     + "requestedAt TEXT NOT NULL, "
-                    + "startDate TEXT NOT NULL, "
-                    + "endDate TEXT NOT NULL, "
+                    + "startDate TEXT, "
+                    + "endDate TEXT, "
                     + "status TEXT NOT NULL, "
                     + "patientId INTEGER NOT NULL REFERENCES Patient(id), "
                     + "professionalId INTEGER REFERENCES HealthcareProfessional(id), "
-                    + "specialtyId INTEGER REFERENCES MedicalSpecialty(id))");
+                    + "specialtyId INTEGER REFERENCES MedicalSpecialty(id), "
+                    + "CHECK (priority >= 1), "
+                    + "CHECK (professionalId IS NOT NULL OR specialtyId IS NOT NULL OR startDate IS NOT NULL))");
 
             // A patient and a staff member can share an id, so userRole says which table it is in
             statement.execute("CREATE TABLE IF NOT EXISTS ActivityLog ("
