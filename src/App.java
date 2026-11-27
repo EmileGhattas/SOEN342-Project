@@ -8,6 +8,8 @@ import domain.MedicalSpecialty;
 import domain.Patient;
 import domain.Referral;
 import domain.TimeSlot;
+import domain.WaitlistEntry;
+import domain.catalog.WaitlistCatalog;
 import domain.Appointment;
 import domain.Consultation;
 import domain.catalog.SpecialtyCatalog;
@@ -43,13 +45,14 @@ public class App {
         ServiceCatalog serviceCatalog = new ServiceCatalog();
         ReferralCatalog referralCatalog = new ReferralCatalog();
         AppointmentCatalog appointmentCatalog = new AppointmentCatalog();
+        WaitlistCatalog waitlistCatalog = new WaitlistCatalog();
 
         // Everything saved before is loaded back into the catalogs
-        load(database, staffCatalog, specialtyCatalog, patientCatalog, serviceCatalog, referralCatalog, appointmentCatalog);
+        load(database, staffCatalog, specialtyCatalog, patientCatalog, serviceCatalog, referralCatalog, appointmentCatalog, waitlistCatalog);
 
         AvailabilityCsv availabilityCsv = new AvailabilityCsv(staffCatalog, specialtyCatalog, "changeit");
         Console console = new Console(patientCatalog, staffCatalog, specialtyCatalog,
-                serviceCatalog, referralCatalog, appointmentCatalog, availabilityCsv, database);
+                serviceCatalog, referralCatalog, appointmentCatalog, availabilityCsv, waitlistCatalog, database);
 
         // An empty database gets sample records
         if (staffCatalog.getAll().isEmpty()) {
@@ -63,7 +66,7 @@ public class App {
     // Each table is loaded after the ones it points to, so every link finds its object
     private static void load(Database database, StaffCatalog staffCatalog, SpecialtyCatalog specialtyCatalog,
                              PatientCatalog patientCatalog, ServiceCatalog serviceCatalog,
-                             ReferralCatalog referralCatalog, AppointmentCatalog appointmentCatalog) throws SQLException {
+                             ReferralCatalog referralCatalog, AppointmentCatalog appointmentCatalog, WaitlistCatalog waitlistCatalog) throws SQLException {
         List<MedicalSpecialty> specialties = new SpecialtyMapper(database).findAll();
         List<MedicalService> services = new MedicalServiceMapper(database).findAll(new ResourceMapper(database).findAll());
         List<Clinic> clinics = new ClinicMapper(database).findAll();
@@ -75,8 +78,11 @@ public class App {
         List<Appointment> appointments = new AppointmentMapper(database).findAll(patients, staff, slots, services, referrals);
         List<Consultation> consultations = new ConsultationMapper(database).findAll(appointments);
         referralMapper.linkConsultations(referrals, consultations);
-        // Adds each entry to its patient
-        new WaitlistEntryMapper(database).findAll(patients, staff, specialties);
+        // Also adds each entry to its patient
+        List<WaitlistEntry> waitlist = new WaitlistEntryMapper(database).findAll(patients, staff, specialties);
+        for (WaitlistEntry entry : waitlist) {
+            waitlistCatalog.add(entry);
+        }
 
         for (MedicalSpecialty specialty : specialties) {
             specialtyCatalog.add(specialty);

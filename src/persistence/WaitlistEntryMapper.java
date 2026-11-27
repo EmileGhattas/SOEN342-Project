@@ -27,13 +27,25 @@ public class WaitlistEntryMapper extends Mapper {
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, entry.getPriority());
             ps.setString(2, toText(entry.getRequestedAt()));
-            ps.setString(3, toText(entry.getDateRange().getStart()));
-            ps.setString(4, toText(entry.getDateRange().getEnd()));
+            DateRange range = entry.getDateRange();
+            ps.setString(3, range == null ? null : toText(range.getStart()));
+            ps.setString(4, range == null ? null : toText(range.getEnd()));
             ps.setString(5, entry.getStatus().name());
             ps.setInt(6, entry.getPatient().getId());
             setForeignKey(ps, 7, entry.getProfessional() == null ? 0 : entry.getProfessional().getId());
             setForeignKey(ps, 8, entry.getSpecialty() == null ? 0 : entry.getSpecialty().getId());
             entry.setId(insertAndGetId(ps));
+        }
+    }
+
+    // Changing the priority, removing and fulfilling change these columns
+    public void update(WaitlistEntry entry) throws SQLException {
+        try (PreparedStatement ps = connection.prepareStatement(
+                "UPDATE WaitlistEntry SET priority = ?, status = ? WHERE id = ?")) {
+            ps.setInt(1, entry.getPriority());
+            ps.setString(2, entry.getStatus().name());
+            ps.setInt(3, entry.getId());
+            ps.executeUpdate();
         }
     }
 
@@ -45,8 +57,9 @@ public class WaitlistEntryMapper extends Mapper {
              ResultSet rs = statement.executeQuery(sql)) {
             while (rs.next()) {
                 Patient patient = findPatient(patients, rs.getInt("patientId"));
-                DateRange range = new DateRange(LocalDate.parse(rs.getString("startDate")),
-                        LocalDate.parse(rs.getString("endDate")));
+                String start = rs.getString("startDate");
+                DateRange range = start == null ? null
+                        : new DateRange(LocalDate.parse(start), LocalDate.parse(rs.getString("endDate")));
                 WaitlistEntry entry = new WaitlistEntry(patient, findProfessional(staff, rs.getInt("professionalId")),
                         findSpecialty(specialties, rs.getInt("specialtyId")), rs.getInt("priority"),
                         LocalDate.parse(rs.getString("requestedAt")), range);
