@@ -39,8 +39,8 @@ public class BookingCliTest {
                     "3", "Visit", "30", "n", "0",
                     "6", "1", "10", "1", "LIC1001", "Cardiology", "2026-12-01", "2026-12-01", "1", "y",
                     "5", "LIC1001", "Cardiology", "2026-12-01", "2026-12-01",
-                    "6", "1", "10", "1", "LIC1001", "Cardiology", "2026-12-01", "2026-12-01",
-                    "2", exported.toString(), "7", "6", "0"));
+                    "6", "1", "10", "1", "LIC1001", "Cardiology", "2026-12-01", "2026-12-01", "n",
+                    "2", exported.toString(), "8", "6", "0"));
             check(output.contains("6 time slot(s) imported."), "CLI imports supplied availability");
             check(output.contains("Patient registered with id 10."), "CLI registers uninsured patient");
             check(output.contains("Appointment requested:") && output.contains("[REQUESTED]"),
