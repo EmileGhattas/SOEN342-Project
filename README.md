@@ -30,6 +30,17 @@ java -cp "out;lib/*" App
 
 IntelliJ: add `lib/` as a library (Project Structure → Libraries), then run `src/App.java`.
 
-Everything is saved in `data/appointment_tracking.db`. The first run fills it with sample data: log in with staff id **1**, password **admin**. Delete file to start over.
+Everything is saved in `data/appointment_tracking.db`. The first run fills it with sample data. Delete file to start over.
 
-Sample patients (find by id or insurance number): Ana Lopez `100` / RAMQ `LOPA90050412` (with confirmed Cardiology referral), Ben Roy `101` / `SUN-4471`, Chloe Martin `102` (no insurance).
+Three kinds of users can interact with the system: Administrative Staff, Healthcare Professionals and Patients.
+
+### Sample logins
+
+| Role | Name | Id | Password | Notes |
+|---|---|---|---|---|
+| Administrative staff | Sam Desk | `1` | `admin` | |
+| Healthcare professional | Alice Tremblay | `2` | `changeit` | Cardiology, licence `LIC1001` |
+| Patient | Ana Lopez | `100` | `pw` | RAMQ `LOPA90050412`, confirmed Cardiology referral |
+
+
+Professionals created by the CSV import get the temporary password `changeit`. 
