@@ -54,7 +54,7 @@ public class App {
         // An empty database gets sample records
         if (staffCatalog.getAll().isEmpty()) {
             SampleData.load(console);
-            System.out.println("Sample data loaded. Log in with staff id 1, password admin.");
+            System.out.println("Sample data loaded. Log in as admin 1/admin, professional 2/changeit or patient 100/pw.");
         }
         new CommandLine(console).run();
         database.close();
