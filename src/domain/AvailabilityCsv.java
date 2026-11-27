@@ -1,5 +1,6 @@
 package domain;
 
+import domain.catalog.PatientCatalog;
 import domain.catalog.SpecialtyCatalog;
 import domain.catalog.StaffCatalog;
 import java.io.IOException;
@@ -16,11 +17,14 @@ public class AvailabilityCsv {
     public static final String HEADER = "First Name,Last Name,Title,License Number,Specialty,Date,Start,End,Status";
 
     private StaffCatalog staffCatalog;
+    private PatientCatalog patientCatalog;
     private SpecialtyCatalog specialtyCatalog;
     private String temporaryPassword = "changeit";
 
-    public AvailabilityCsv(StaffCatalog staffCatalog, SpecialtyCatalog specialtyCatalog, String temporaryPassword) {
+    public AvailabilityCsv(StaffCatalog staffCatalog, PatientCatalog patientCatalog,
+                           SpecialtyCatalog specialtyCatalog, String temporaryPassword) {
         this.staffCatalog = staffCatalog;
+        this.patientCatalog = patientCatalog;
         this.specialtyCatalog = specialtyCatalog;
         this.temporaryPassword = temporaryPassword;
     }
@@ -76,10 +80,13 @@ public class AvailabilityCsv {
 
         HealthcareProfessional hcp = staffCatalog.findProfessionalByLicense(licenseNumber);
         if (hcp == null) {
-            // Manual staff setup may use non-sequential ids.
+            // The next id after every staff member and patient, so ids stay unique across users
             int id = 1;
             for (AuthorizedClinicStaff member : staffCatalog.getAll()) {
-                id = Math.max(id, Math.addExact(member.getId(), 1));
+                id = Math.max(id, member.getId() + 1);
+            }
+            for (Patient patient : patientCatalog.getAll()) {
+                id = Math.max(id, patient.getId() + 1);
             }
             hcp = new HealthcareProfessional(id, temporaryPassword, firstName, lastName, title, licenseNumber, specialty);
             staffCatalog.add(hcp);

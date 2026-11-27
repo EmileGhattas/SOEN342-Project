@@ -47,7 +47,7 @@ public class App {
         // Everything saved before is loaded back into the catalogs
         load(database, staffCatalog, specialtyCatalog, patientCatalog, serviceCatalog, referralCatalog, appointmentCatalog);
 
-        AvailabilityCsv availabilityCsv = new AvailabilityCsv(staffCatalog, specialtyCatalog, "changeit");
+        AvailabilityCsv availabilityCsv = new AvailabilityCsv(staffCatalog, patientCatalog, specialtyCatalog, "changeit");
         Console console = new Console(patientCatalog, staffCatalog, specialtyCatalog,
                 serviceCatalog, referralCatalog, appointmentCatalog, availabilityCsv, database);
 

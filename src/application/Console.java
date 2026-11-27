@@ -83,10 +83,10 @@ public class Console {
         this.availabilityCsv = Objects.requireNonNull(availabilityCsv);
     }
 
+    // Ids are unique across staff and patients, so one login works for every role
     public void login(int id, String password) {
         currentUser = null;
-        // This PoC implements the staff-assisted booking path.
-        User user = staffCatalog.findStaff(id);
+        User user = findUser(id);
         if (user == null) throw new IllegalArgumentException("Invalid id or password.");
         user.login(id, password);
         currentUser = user;
@@ -105,17 +105,14 @@ public class Console {
         currentProfessional = null;
     }
 
-    // Bootstrap the first administrator; later setup requires a staff session.
+    // Anyone can create the first administrator; after that only administrative staff can add staff
     public AdministrativeStaff registerStaff(int id, String password, String firstName, String lastName) {
-        for (AuthorizedClinicStaff member : staffCatalog.getAll()) {
-            if (member instanceof AdministrativeStaff) {
-                requireStaff();
-                break;
-            }
+        if (hasAdministrator()) {
+            requireAdmin();
         }
         requireId(id);
-        if (staffCatalog.findStaff(id) != null) {
-            throw new IllegalArgumentException("A staff member already has that id.");
+        if (findUser(id) != null) {
+            throw new IllegalArgumentException("A user already has that id.");
         }
         requiredText(password, "Password");
         AdministrativeStaff staff = new AdministrativeStaff(id, password,
@@ -136,10 +133,10 @@ public class Console {
 
     public Patient registerPatient(int id, String password, String firstName, String lastName,
                                    LocalDate birthDate, String phone, Insurance insurance) {
-        requireStaff();
+        requireAdmin();
         requireId(id);
-        if (patientCatalog.findPatient(id) != null) {
-            throw new IllegalArgumentException("A patient already has that id.");
+        if (findUser(id) != null) {
+            throw new IllegalArgumentException("A user already has that id.");
         }
         if (birthDate == null) throw new IllegalArgumentException("Date of birth is required.");
         if (insurance != null) requiredText(insurance.getHealthInsuranceNum(), "Insurance number");
@@ -163,7 +160,7 @@ public class Console {
     }
 
     public MedicalService registerService(String name, int duration, boolean requiresReferral) {
-        requireStaff();
+        requireAdmin();
         name = requiredText(name, "Service name");
         if (serviceCatalog.findService(name) != null) {
             throw new IllegalArgumentException("A service already has that name.");
@@ -186,7 +183,7 @@ public class Console {
     // Record an existing external referral; this does not send or issue a referral.
     public Referral recordReferral(Patient patient, MedicalSpecialty specialty, ExternalPhysician physician,
                                    String reason, ReferralPriority priority, ReferralType type, boolean confirmed) {
-        requireStaff();
+        requireAdmin();
         if (patient == null || !patientCatalog.getAll().contains(patient)) {
             throw new IllegalArgumentException("Patient not found.");
         }
@@ -217,12 +214,12 @@ public class Console {
     }
 
     public List<MedicalService> getServices() {
-        requireStaff();
+        requireLogin();
         return serviceCatalog.getAll();
     }
 
     public MedicalSpecialty findSpecialty(String name) {
-        requireStaff();
+        requireLogin();
         MedicalSpecialty specialty = specialtyCatalog.findSpecialty(requiredText(name, "Specialty"));
         if (specialty == null) throw new IllegalArgumentException("Specialty not found: " + name);
         return specialty;
@@ -257,7 +254,7 @@ public class Console {
     }
 
     public List<TimeSlot> searchAvailability(String professional, MedicalSpecialty specialty, DateRange range) {
-        requireStaff();
+        requireLogin();
         if (range == null) throw new IllegalArgumentException("A date range is required.");
         List<TimeSlot> available = new ArrayList<>();
         for (HealthcareProfessional hcp : staffCatalog.findProfessionals(professional, specialty)) {
@@ -271,7 +268,11 @@ public class Console {
 
     public Appointment requestAppointment(Patient patient, HealthcareProfessional professional,
                                           TimeSlot slot, MedicalService service) {
-        requireStaff();
+        requireLogin();
+        // A patient can only request an appointment for themselves
+        if (currentUser instanceof Patient && patient != currentUser) {
+            throw new IllegalStateException("Patients can only request appointments for themselves.");
+        }
         if (patient == null || !patientCatalog.getAll().contains(patient)) {
             throw new IllegalArgumentException("Patient not found. Register the patient before booking.");
         }
@@ -306,7 +307,7 @@ public class Console {
 
     // Make availability step 1: Choose who's schedule to add to
     public HealthcareProfessional selectProfessional(String licenseNumber){
-        requireStaff();
+        requireAdmin();
         HealthcareProfessional hcp = staffCatalog.findProfessionalByLicense(requiredText(licenseNumber, "License number"));
         if (hcp == null) {
             throw new IllegalArgumentException("No healthcare professional with license number " + licenseNumber + ".");
@@ -317,7 +318,7 @@ public class Console {
 
     // Make availability step 2: return time slots created
     public List<TimeSlot> makeAvailability(DateRange dateRange, RecurrencePattern pattern, LocalTime startTime, LocalTime endTime, Duration slotLength) {
-        requireStaff();
+        requireAdmin();
         if (currentProfessional == null) {
             throw new IllegalStateException("Select a healthcare professional first");
         }
@@ -338,14 +339,47 @@ public class Console {
         return created;
     }
 
-    private AuthorizedClinicStaff requireStaff() {
+    // Use cases open to every role
+    private void requireLogin() {
+        if (currentUser == null) {
+            throw new IllegalStateException("Log in first.");
+        }
+    }
+
+    // Use cases of the Authorized Clinic Staff actor
+    private void requireStaff() {
         if (!(currentUser instanceof AuthorizedClinicStaff)) {
             throw new IllegalStateException("Log in as clinic staff first.");
         }
-        return (AuthorizedClinicStaff) currentUser;
+    }
+
+    // Use cases of the Administrative Staff actor
+    private void requireAdmin() {
+        if (!(currentUser instanceof AdministrativeStaff)) {
+            throw new IllegalStateException("Log in as administrative staff first.");
+        }
+    }
+
+    // The staff member or patient with that id, or null
+    private User findUser(int id) {
+        User user = staffCatalog.findStaff(id);
+        if (user == null) {
+            user = patientCatalog.findPatient(id);
+        }
+        return user;
+    }
+
+    public boolean hasAdministrator() {
+        for (AuthorizedClinicStaff member : staffCatalog.getAll()) {
+            if (member instanceof AdministrativeStaff) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public int importAvailabilities(Path source) throws IOException {
+        requireAdmin();
         try {
             return availabilityCsv.importAvailabilities(source);
         } finally {
@@ -411,6 +445,7 @@ public class Console {
     }
 
     public int exportAvailabilities(Path target) throws IOException {
+        requireAdmin();
         return availabilityCsv.exportAvailabilities(target);
     }
 }

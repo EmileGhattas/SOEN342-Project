@@ -2,7 +2,7 @@ package ui;
 
 import application.Console;
 import domain.Appointment;
-import domain.AuthorizedClinicStaff;
+import domain.AdministrativeStaff;
 import domain.DateRange;
 import domain.ExternalPhysician;
 import domain.Insurance;
@@ -16,6 +16,7 @@ import domain.ReferralPriority;
 import domain.ReferralType;
 import domain.TimeSlot;
 import domain.HealthcareProfessional;
+import domain.User;
 import domain.RecurrencePattern;
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -50,45 +51,13 @@ public class CommandLine {
         while (true) {
             try {
                 out.println();
-                out.println("Staff: " + (console.getCurrentUser() == null ? "not logged in" : console.getCurrentUser()));
-                out.println("1. Import availabilities from CSV");
-                out.println("2. Export availabilities to CSV");
-                out.println("3. Setup booking records");
-                out.println("4. Staff login");
-                out.println("5. Search availability");
-                out.println("6. Book appointment");
-                out.println("7. Make availability");
-                out.println("8. Log out");
-                out.println("0. Quit");
-                String choice = read("Choice: ");
-                if (choice.equals("0")) return;
-                if (choice.equals("1")) {
-                    Path source = Path.of(read("CSV file to import: "));
-                    if (!Files.exists(source) && Files.exists(Path.of("data").resolve(source))) {
-                        source = Path.of("data").resolve(source);
-                    }
-                    out.println(console.importAvailabilities(source) + " time slot(s) imported.");
-                } else if (choice.equals("2")) {
-                    Path target = Path.of(read("CSV file to write: "));
-                    out.println(console.exportAvailabilities(target) + " time slot(s) exported.");
-                } else if (choice.equals("3")) {
-                    setup();
-                } else if (choice.equals("4")) {
-                    int id = readInt("Staff id: ");
-                    console.login(id, readPassword("Password: "));
-                    out.println("Logged in as " + console.getCurrentUser() + ".");
-                } else if (choice.equals("5")) {
-                    searchSlots();
-                } else if (choice.equals("6")) {
-                    bookAppointment();
-                } else if (choice.equals("7")){
-                    makeAvailability();
-                } else if (choice.equals("8")) {
-                    console.logout();
-                    out.println("Logged out.");
-                } else {
-                    out.println("Unknown choice, enter a number from 0 to 8.");
-                }
+                boolean keepGoing;
+                User user = console.getCurrentUser();
+                if (user == null) keepGoing = loginMenu();
+                else if (user instanceof Patient) keepGoing = patientMenu();
+                else if (user instanceof AdministrativeStaff) keepGoing = adminMenu();
+                else keepGoing = professionalMenu();
+                if (!keepGoing) return;
             } catch (NoSuchElementException e) {
                 out.println("Input closed.");
                 return;
@@ -106,10 +75,110 @@ public class CommandLine {
         }
     }
 
+    // Each menu returns false when the user quits
+    private boolean loginMenu() {
+        out.println("Not logged in");
+        out.println("1. Log in");
+        if (!console.hasAdministrator()) out.println("2. Create the first administrator account");
+        out.println("0. Quit");
+        String choice = read("Choice: ");
+        if (choice.equals("0")) return false;
+        if (choice.equals("1")) {
+            int id = readInt("User id: ");
+            console.login(id, readPassword("Password: "));
+            out.println("Logged in as " + console.getCurrentUser() + ".");
+        } else if (choice.equals("2") && !console.hasAdministrator()) {
+            addStaff();
+        } else {
+            out.println("Unknown choice.");
+        }
+        return true;
+    }
+
+    private boolean patientMenu() {
+        out.println("Patient: " + console.getCurrentUser());
+        out.println("1. Search availability");
+        out.println("2. Request appointment");
+        out.println("9. Log out");
+        out.println("0. Quit");
+        String choice = read("Choice: ");
+        if (choice.equals("0")) return false;
+        if (choice.equals("1")) searchSlots();
+        else if (choice.equals("2")) bookAppointment();
+        else if (choice.equals("9")) logout();
+        else out.println("Unknown choice.");
+        return true;
+    }
+
+    private boolean professionalMenu() {
+        out.println("Healthcare professional: " + console.getCurrentUser());
+        out.println("1. Search availability");
+        out.println("2. Book appointment");
+        out.println("9. Log out");
+        out.println("0. Quit");
+        String choice = read("Choice: ");
+        if (choice.equals("0")) return false;
+        if (choice.equals("1")) searchSlots();
+        else if (choice.equals("2")) bookAppointment();
+        else if (choice.equals("9")) logout();
+        else out.println("Unknown choice.");
+        return true;
+    }
+
+    private boolean adminMenu() throws IOException {
+        out.println("Administrative staff: " + console.getCurrentUser());
+        out.println("1. Search availability");
+        out.println("2. Book appointment");
+        out.println("3. Make availability");
+        out.println("4. Import availabilities from CSV");
+        out.println("5. Export availabilities to CSV");
+        out.println("6. Setup records");
+        out.println("9. Log out");
+        out.println("0. Quit");
+        String choice = read("Choice: ");
+        if (choice.equals("0")) return false;
+        if (choice.equals("1")) {
+            searchSlots();
+        } else if (choice.equals("2")) {
+            bookAppointment();
+        } else if (choice.equals("3")) {
+            makeAvailability();
+        } else if (choice.equals("4")) {
+            Path source = Path.of(read("CSV file to import: "));
+            if (!Files.exists(source) && Files.exists(Path.of("data").resolve(source))) {
+                source = Path.of("data").resolve(source);
+            }
+            out.println(console.importAvailabilities(source) + " time slot(s) imported.");
+        } else if (choice.equals("5")) {
+            Path target = Path.of(read("CSV file to write: "));
+            out.println(console.exportAvailabilities(target) + " time slot(s) exported.");
+        } else if (choice.equals("6")) {
+            setup();
+        } else if (choice.equals("9")) {
+            logout();
+        } else {
+            out.println("Unknown choice.");
+        }
+        return true;
+    }
+
+    private void logout() {
+        console.logout();
+        out.println("Logged out.");
+    }
+
+    private void addStaff() {
+        int id = readInt("Staff id: ");
+        String first = read("First name: ");
+        String last = read("Last name: ");
+        console.registerStaff(id, readPassword("Password: "), first, last);
+        out.println("Staff account created. Log in with id " + id + ".");
+    }
+
     private void setup() {
         while (true) {
             out.println();
-            out.println("1. Add administrative staff (create the first account here)");
+            out.println("1. Add administrative staff");
             out.println("2. Register patient");
             out.println("3. Add medical service");
             out.println("4. Record an external referral");
@@ -117,22 +186,15 @@ public class CommandLine {
             String choice = read("Setup choice: ");
             if (choice.equals("0")) return;
             if (choice.equals("1")) {
-                int id = readInt("Staff id: ");
-                String first = read("First name: ");
-                String last = read("Last name: ");
-                console.registerStaff(id, readPassword("Password: "), first, last);
-                out.println("Staff account created. Use Staff login with id " + id + ".");
+                addStaff();
             } else if (choice.equals("2")) {
-                requireStaff();
                 registerPatient();
             } else if (choice.equals("3")) {
-                requireStaff();
                 String name = read("Service name: ");
                 int duration = readInt("Duration in minutes: ");
                 console.registerService(name, duration, yes("Referral required? (y/n): "));
                 out.println("Medical service added.");
             } else if (choice.equals("4")) {
-                requireStaff();
                 recordReferral();
             } else {
                 out.println("Unknown setup choice.");
@@ -188,7 +250,6 @@ public class CommandLine {
     }
 
     private List<TimeSlot> searchSlots() {
-        requireStaff();
         String professional = read("Professional name or licence (blank for any): ");
         String specialtyName = read("Specialty (blank for any): ");
         MedicalSpecialty specialty = specialtyName.isEmpty() ? null : console.findSpecialty(specialtyName);
@@ -206,8 +267,10 @@ public class CommandLine {
     }
 
     private void bookAppointment() {
-        requireStaff();
-        Patient patient = readPatient();
+        // A patient books for themselves, staff choose the patient
+        Patient patient;
+        if (console.getCurrentUser() instanceof Patient) patient = (Patient) console.getCurrentUser();
+        else patient = readPatient();
         if (patient == null) return;
         List<MedicalService> services = console.getServices();
         if (services.isEmpty()) {
@@ -235,7 +298,6 @@ public class CommandLine {
     }
 
     private void makeAvailability(){
-        requireStaff();
         HealthcareProfessional hcp = console.selectProfessional(read("Professional's license number: "));
         out.println("Selected: " + hcp.getTitle() + " " + hcp.getFullName() + " (" + hcp.getSpecialty() + ")");
         LocalDate start = LocalDate.parse(read("Start date (YYYY-MM-DD): "));
@@ -271,12 +333,6 @@ public class CommandLine {
             }
         }
         return days;
-    }
-
-    private void requireStaff() {
-        if (!(console.getCurrentUser() instanceof AuthorizedClinicStaff)) {
-            throw new IllegalStateException("Log in as clinic staff first.");
-        }
     }
 
     private String read(String prompt) {
