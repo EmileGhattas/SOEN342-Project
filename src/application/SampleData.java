@@ -42,7 +42,7 @@ public class SampleData {
                 "514-555-0101", new RAMQ("LOPA90050412"));
         Patient ben = console.registerPatient(101, "pw", "Ben", "Roy", LocalDate.of(1985, 11, 20),
                 "514-555-0102", new PrivateInsurance("SUN-4471"));
-        console.registerPatient(102, "pw", "Chloe", "Martin", LocalDate.of(2001, 2, 14), "438-555-0103", null);
+        Patient chloe = console.registerPatient(102, "pw", "Chloe", "Martin", LocalDate.of(2001, 2, 14), "438-555-0103", null);
 
         MedicalService checkup = console.registerService("General checkup", 30, false);
         MedicalService cardiology = console.registerService("Cardiology consultation", 30, true);
@@ -56,6 +56,10 @@ public class SampleData {
         HealthcareProfessional alice = slots.get(0).getProfessional();
         console.requestAppointment(ana, alice, slots.get(0), cardiology);
         console.requestAppointment(ben, alice, slots.get(1), checkup);
+
+        // Two patients waiting: freeing one of Alice's slots makes both eligible
+        console.requestWaitlistPlacement(ben, alice, null, nextFourWeeks, 1);
+        console.requestWaitlistPlacement(chloe, null, console.findSpecialty("Cardiology"), null, 2);
 
         console.logout();
     }
