@@ -79,7 +79,6 @@ public class CommandLine {
     private boolean loginMenu() {
         out.println("Not logged in");
         out.println("1. Log in");
-        if (!console.hasAdministrator()) out.println("2. Create the first administrator account");
         out.println("0. Quit");
         String choice = read("Choice: ");
         if (choice.equals("0")) return false;
@@ -87,8 +86,6 @@ public class CommandLine {
             int id = readInt("User id: ");
             console.login(id, readPassword("Password: "));
             out.println("Logged in as " + console.getCurrentUser() + ".");
-        } else if (choice.equals("2") && !console.hasAdministrator()) {
-            addStaff();
         } else {
             out.println("Unknown choice.");
         }
@@ -99,13 +96,21 @@ public class CommandLine {
         out.println("Patient: " + console.getCurrentUser());
         out.println("1. Search availability");
         out.println("2. Request appointment");
-        out.println("9. Log out");
+        out.println("3. Confirm appointment (todo)");
+        out.println("4. Reschedule appointment (todo)");
+        out.println("5. Cancel appointment (todo)");
+        out.println("6. Request placement on waitlist (todo)");
+        out.println("L. Log out");
         out.println("0. Quit");
         String choice = read("Choice: ");
         if (choice.equals("0")) return false;
         if (choice.equals("1")) searchSlots();
         else if (choice.equals("2")) bookAppointment();
-        else if (choice.equals("9")) logout();
+        else if (choice.equals("3")) out.println("Not implemented yet.");
+        else if (choice.equals("4")) out.println("Not implemented yet.");
+        else if (choice.equals("5")) out.println("Not implemented yet.");
+        else if (choice.equals("6")) out.println("Not implemented yet.");
+        else if (choice.equalsIgnoreCase("L")) logout();
         else out.println("Unknown choice.");
         return true;
     }
@@ -113,14 +118,26 @@ public class CommandLine {
     private boolean professionalMenu() {
         out.println("Healthcare professional: " + console.getCurrentUser());
         out.println("1. Search availability");
-        out.println("2. Book appointment");
-        out.println("9. Log out");
+        out.println("2. Request appointment");
+        out.println("3. Confirm appointment (todo)");
+        out.println("4. Reschedule appointment (todo)");
+        out.println("5. Cancel appointment (todo)");
+        out.println("6. Search patient (todo)");
+        out.println("7. Issue referral (todo)");
+        out.println("8. Record clinical information (todo)");
+        out.println("L. Log out");
         out.println("0. Quit");
         String choice = read("Choice: ");
         if (choice.equals("0")) return false;
         if (choice.equals("1")) searchSlots();
         else if (choice.equals("2")) bookAppointment();
-        else if (choice.equals("9")) logout();
+        else if (choice.equals("3")) out.println("Not implemented yet.");
+        else if (choice.equals("4")) out.println("Not implemented yet.");
+        else if (choice.equals("5")) out.println("Not implemented yet.");
+        else if (choice.equals("6")) out.println("Not implemented yet.");
+        else if (choice.equals("7")) out.println("Not implemented yet.");
+        else if (choice.equals("8")) out.println("Not implemented yet.");
+        else if (choice.equalsIgnoreCase("L")) logout();
         else out.println("Unknown choice.");
         return true;
     }
@@ -128,78 +145,60 @@ public class CommandLine {
     private boolean adminMenu() throws IOException {
         out.println("Administrative staff: " + console.getCurrentUser());
         out.println("1. Search availability");
-        out.println("2. Book appointment");
+        out.println("2. Request appointment");
         out.println("3. Make availability");
-        out.println("4. Import availabilities from CSV");
-        out.println("5. Export availabilities to CSV");
-        out.println("6. Setup records");
-        out.println("9. Log out");
+        out.println("4. Import/export CSV");
+        out.println("5. Register patient");
+        out.println("6. Record external referral");
+        out.println("7. Confirm appointment (todo)");
+        out.println("8. Reschedule appointment (todo)");
+        out.println("9. Cancel appointment (todo)");
+        out.println("10. Search patient (todo)");
+        out.println("11. Register patient arrival (todo)");
+        out.println("12. Offer appointment (todo)");
+        out.println("13. Remove patient from waitlist (todo)");
+        out.println("14. Change waitlist patient priority (todo)");
+        out.println("L. Log out");
         out.println("0. Quit");
         String choice = read("Choice: ");
         if (choice.equals("0")) return false;
-        if (choice.equals("1")) {
-            searchSlots();
-        } else if (choice.equals("2")) {
-            bookAppointment();
-        } else if (choice.equals("3")) {
-            makeAvailability();
-        } else if (choice.equals("4")) {
+        if (choice.equals("1")) searchSlots();
+        else if (choice.equals("2")) bookAppointment();
+        else if (choice.equals("3")) makeAvailability();
+        else if (choice.equals("4")) importExportCsv();
+        else if (choice.equals("5")) registerPatient();
+        else if (choice.equals("6")) recordReferral();
+        else if (choice.equals("7")) out.println("Not implemented yet.");
+        else if (choice.equals("8")) out.println("Not implemented yet.");
+        else if (choice.equals("9")) out.println("Not implemented yet.");
+        else if (choice.equals("10")) out.println("Not implemented yet.");
+        else if (choice.equals("11")) out.println("Not implemented yet.");
+        else if (choice.equals("12")) out.println("Not implemented yet.");
+        else if (choice.equals("13")) out.println("Not implemented yet.");
+        else if (choice.equals("14")) out.println("Not implemented yet.");
+        else if (choice.equalsIgnoreCase("L")) logout();
+        else out.println("Unknown choice.");
+        return true;
+    }
+
+    private void importExportCsv() throws IOException {
+        out.println("1. Import availabilities, 2. Export availabilities, 0. Cancel");
+        int choice = readChoice("CSV choice: ", 2);
+        if (choice == 1) {
             Path source = Path.of(read("CSV file to import: "));
             if (!Files.exists(source) && Files.exists(Path.of("data").resolve(source))) {
                 source = Path.of("data").resolve(source);
             }
             out.println(console.importAvailabilities(source) + " time slot(s) imported.");
-        } else if (choice.equals("5")) {
+        } else if (choice == 2) {
             Path target = Path.of(read("CSV file to write: "));
             out.println(console.exportAvailabilities(target) + " time slot(s) exported.");
-        } else if (choice.equals("6")) {
-            setup();
-        } else if (choice.equals("9")) {
-            logout();
-        } else {
-            out.println("Unknown choice.");
         }
-        return true;
     }
 
     private void logout() {
         console.logout();
         out.println("Logged out.");
-    }
-
-    private void addStaff() {
-        int id = readInt("Staff id: ");
-        String first = read("First name: ");
-        String last = read("Last name: ");
-        console.registerStaff(id, readPassword("Password: "), first, last);
-        out.println("Staff account created. Log in with id " + id + ".");
-    }
-
-    private void setup() {
-        while (true) {
-            out.println();
-            out.println("1. Add administrative staff");
-            out.println("2. Register patient");
-            out.println("3. Add medical service");
-            out.println("4. Record an external referral");
-            out.println("0. Back");
-            String choice = read("Setup choice: ");
-            if (choice.equals("0")) return;
-            if (choice.equals("1")) {
-                addStaff();
-            } else if (choice.equals("2")) {
-                registerPatient();
-            } else if (choice.equals("3")) {
-                String name = read("Service name: ");
-                int duration = readInt("Duration in minutes: ");
-                console.registerService(name, duration, yes("Referral required? (y/n): "));
-                out.println("Medical service added.");
-            } else if (choice.equals("4")) {
-                recordReferral();
-            } else {
-                out.println("Unknown setup choice.");
-            }
-        }
     }
 
     private void registerPatient() {
@@ -244,7 +243,7 @@ public class CommandLine {
         Patient patient;
         if (choice == 1) patient = console.searchPatient(readInt("Patient id: "));
         else patient = console.searchPatient(read("Insurance number: "));
-        if (patient == null) out.println("Patient not found. Register the patient in Setup first.");
+        if (patient == null) out.println("Patient not found. Register the patient first.");
         else out.println("Patient: " + patient);
         return patient;
     }
@@ -274,7 +273,7 @@ public class CommandLine {
         if (patient == null) return;
         List<MedicalService> services = console.getServices();
         if (services.isEmpty()) {
-            out.println("No medical services registered. Add one in Setup first.");
+            out.println("No medical services available.");
             return;
         }
         for (int i = 0; i < services.size(); i++) {

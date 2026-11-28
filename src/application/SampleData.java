@@ -8,6 +8,8 @@ import domain.Patient;
 import domain.PrivateInsurance;
 import domain.RAMQ;
 import domain.RecurrencePattern;
+import domain.Resource;
+import domain.ResourceType;
 import domain.ReferralPriority;
 import domain.ReferralType;
 import domain.TimeSlot;
@@ -26,7 +28,8 @@ public class SampleData {
         console.registerStaff(1, "admin", "Sam", "Desk");
         console.login(1, "admin");
 
-        // Alice Tremblay (LIC1001), Marc Gagnon (LIC1002) and Sofia Nguyen (LIC1003) with their slots
+        // Alice Tremblay (LIC1001), Marc Gagnon (LIC1002), Sofia Nguyen (LIC1003),
+        // Julie Bouchard (LIC1004) and Karim Haddad (LIC1005) with their slots
         console.importAvailabilities(Path.of("data/availabilities.csv"));
 
         // Slots for the next four weeks, so there is always something to book
@@ -44,8 +47,17 @@ public class SampleData {
                 "514-555-0102", new PrivateInsurance("SUN-4471"));
         console.registerPatient(102, "pw", "Chloe", "Martin", LocalDate.of(2001, 2, 14), "438-555-0103", null);
 
-        MedicalService checkup = console.registerService("General checkup", 30, false);
-        MedicalService cardiology = console.registerService("Cardiology consultation", 30, true);
+        Resource room1 = console.registerResource(ResourceType.ROOM, "Examination room 1");
+        Resource room2 = console.registerResource(ResourceType.ROOM, "Examination room 2");
+        Resource ecgMachine = console.registerResource(ResourceType.EQUIPMENT, "ECG machine");
+        Resource dermatoscope = console.registerResource(ResourceType.EQUIPMENT, "Dermatoscope");
+        Resource nurse = console.registerResource(ResourceType.HUMAN_ROLE, "Nurse");
+
+        MedicalService checkup = console.registerService("General checkup", 30, false, room1);
+        MedicalService cardiology = console.registerService("Cardiology consultation", 30, true, room2);
+        console.registerService("Electrocardiogram (ECG)", 30, true, room2, ecgMachine, nurse);
+        console.registerService("Dermatology consultation", 30, true, room1, dermatoscope);
+        console.registerService("Vaccination", 15, false, nurse);
 
         // Ana has a confirmed referral, so she can book the cardiology consultation
         console.recordReferral(ana, console.findSpecialty("Cardiology"), new ExternalPhysician("EXT2001", "Dr. Paul Roy"),
