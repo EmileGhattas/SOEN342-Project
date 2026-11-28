@@ -16,6 +16,8 @@ import domain.Referral;
 import domain.ReferralPriority;
 import domain.ReferralStatus;
 import domain.ReferralType;
+import domain.Resource;
+import domain.ResourceType;
 import domain.TimeSlot;
 import domain.User;
 import domain.catalog.AppointmentCatalog;
@@ -43,6 +45,7 @@ import persistence.ExternalPhysicianMapper;
 import persistence.MedicalServiceMapper;
 import persistence.PatientMapper;
 import persistence.ReferralMapper;
+import persistence.ResourceMapper;
 import persistence.SpecialtyMapper;
 import persistence.StaffMapper;
 import persistence.TimeSlotMapper;
@@ -159,19 +162,37 @@ public class Console {
         return patient;
     }
 
-    public MedicalService registerService(String name, int duration, boolean requiresReferral) {
-        requireAdmin();
+    // Seeded resources
+    public Resource registerResource(ResourceType type, String name) {
+        if (type == null) throw new IllegalArgumentException("Resource type is required.");
+        Resource resource = new Resource(type, requiredText(name, "Resource name"));
+        if (database != null) {
+            try {
+                database.begin();
+                new ResourceMapper(database).insert(resource);
+                database.commit();
+            } catch (SQLException e) {
+                throw saveFailed(e);
+            }
+        }
+        return resource;
+    }
+
+    // Seeded services
+    public MedicalService registerService(String name, int duration, boolean requiresReferral, Resource... resources) {
         name = requiredText(name, "Service name");
         if (serviceCatalog.findService(name) != null) {
             throw new IllegalArgumentException("A service already has that name.");
         }
         MedicalService service = new MedicalService(name, duration, requiresReferral);
+        for (Resource resource : resources) {
+            service.addResource(resource);
+        }
         serviceCatalog.add(service);
         if (database != null) {
             try {
                 database.begin();
                 new MedicalServiceMapper(database).insert(service);
-                log(currentUser, "Added service " + service.getName());
                 database.commit();
             } catch (SQLException e) {
                 throw saveFailed(e);
